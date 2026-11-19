@@ -1,4 +1,4 @@
-# 🗂️ Mon organisateur
+#  Mon organisateur
 
 **Application web d'organisation du travail, en français.**
 On écrit — ou on **dit** — ce qu'on a à faire, en langage naturel. L'application le comprend, le range
@@ -19,20 +19,20 @@ la journée, annonce les rappels et lit les nouveaux mails.
 
 ---
 
-## ✨ Fonctionnalités
+##  Fonctionnalités
 
 | | |
 |---|---|
-| 🗣️ **Saisie naturelle** | Une seule zone pour écrire ou dicter (micro). Plusieurs choses d'un coup avec « puis ». Les dates relatives (« demain », « lundi », « dans 2 heures ») sont comprises. |
-| ☀️ **Vue « Aujourd'hui »** | Ce qui est en retard, la journée heure par heure, les tâches à placer et un aperçu de demain, avec une barre de progression. |
-| 📅 **Calendrier** | Vue du mois ; un clic sur un jour l'ouvre en grand pour cocher, modifier ou ajouter directement à cette date. |
-| 🤖 **Assistant vocal** | Répond à voix haute : « qu'est-ce que j'ai demain ? », « organise ma journée » (il propose des horaires et les applique si on dit « oui »), « décale le rapport à 15h ». |
-| ⏰ **Rappels parlés** | 10 minutes avant un rendez-vous, puis à l'heure : message, notification et voix. |
-| 📬 **Mails** | Connexion à sa boîte (Gmail, Yahoo, iCloud… via IMAP) avec un guide pas à pas. Les mails non lus s'affichent, deviennent des tâches en un clic, et l'assistant annonce les nouveaux. **Lecture seule.** |
-| 🧠 **IA locale gratuite** *(expérimental)* | L'assistant peut utiliser un modèle d'IA qui tourne sur l'ordinateur (Ollama) — aucune donnée envoyée, aucun coût. Sans IA, il fonctionne avec des règles. |
-| 📱 **Partout** | Mode sombre automatique, version téléphone avec barre d'onglets, export `.ics` vers Google / Outlook / Apple Agenda. |
+|  **Saisie naturelle** | Une seule zone pour écrire ou dicter (micro). Plusieurs choses d'un coup avec « puis ». Les dates relatives (« demain », « lundi », « dans 2 heures ») sont comprises. |
+|  **Vue « Aujourd'hui »** | Ce qui est en retard, la journée heure par heure, les tâches à placer et un aperçu de demain, avec une barre de progression. |
+|  **Calendrier** | Vue du mois ; un clic sur un jour l'ouvre en grand pour cocher, modifier ou ajouter directement à cette date. |
+|  **Assistant vocal** | Répond à voix haute : « qu'est-ce que j'ai demain ? », « organise ma journée » (il propose des horaires et les applique si on dit « oui »), « décale le rapport à 15h ». |
+|  **Rappels parlés** | 10 minutes avant un rendez-vous, puis à l'heure : message, notification et voix. |
+|  **Mails** | Connexion à sa boîte (Gmail, Yahoo, iCloud… via IMAP) avec un guide pas à pas. Les mails non lus s'affichent, deviennent des tâches en un clic, et l'assistant annonce les nouveaux. **Lecture seule.** |
+|  **IA locale gratuite** *(expérimental)* | L'assistant peut utiliser un modèle d'IA qui tourne sur l'ordinateur (Ollama) — aucune donnée envoyée, aucun coût. Sans IA, il fonctionne avec des règles. |
+|  **Partout** | Mode sombre automatique, version téléphone avec barre d'onglets, export `.ics` vers Google / Outlook / Apple Agenda. |
 
-## 📸 Captures d'écran
+##  Captures d'écran
 
 | Un jour ouvert en grand | L'assistant vocal |
 |---|---|
@@ -44,7 +44,7 @@ la journée, annonce les rappels et lit les nouveaux mails.
 
 *Captures réalisées avec des données de démonstration.*
 
-## 🛠️ Technologies
+##  Technologies
 
 | Partie | Outils |
 |---|---|
@@ -58,7 +58,7 @@ la journée, annonce les rappels et lit les nouveaux mails.
 | Qualité | **pytest** (38 tests), faux serveur IMAP et fausse IA pour tester sans réseau |
 | Outils de dev | Git, GitHub, assistant de programmation IA (Claude Code) |
 
-## 🧠 Architecture
+##  Architecture
 
 ```mermaid
 flowchart LR
@@ -80,7 +80,7 @@ Points clés :
 - **L'IA n'invente rien** : elle agit uniquement via des outils (ajouter, modifier, lire les mails) et reçoit l'état à jour de l'application à chaque message. Les dates des jours suivants lui sont données toutes prêtes, car les petits modèles se trompent souvent dans les calculs de dates.
 - **Mails en lecture seule** : boîte ouverte en `readonly`, messages lus avec `BODY.PEEK` (ils restent « non lus »). Un test le vérifie.
 
-## 🚀 Essayer l'application
+##  Essayer l'application
 
 **Le plus simple (Windows)** : installer [Python](https://www.python.org/downloads/) en cochant *Add Python to PATH*,
 télécharger le projet (**Code → Download ZIP**), l'extraire, puis **double-cliquer sur `Lancer-application.bat`**.
@@ -106,14 +106,14 @@ l'assistant répond quand même en mode rapide : il ne reste jamais bloqué.
 pytest
 ```
 
-## 🔒 Vie privée et gratuité
+##  Vie privée et gratuité
 
 - Tout tourne **sur l'ordinateur** : les tâches sont dans `data/organizer.db`, le compte mail dans `data/mail.json`
   (dossier exclu de Git).
 - **Aucun service payant n'est nécessaire.** La clé API Claude est optionnelle (voir `.env.example`).
 - La dictée vocale utilise le service de reconnaissance de Chrome / Edge.
 
-## 📚 Ce que j'ai appris
+##  Ce que j'ai appris
 
 - Concevoir une **API REST** avec FastAPI et Pydantic (validation, codes d'erreur, routes CRUD).
 - Analyser du **langage naturel en français** avec des règles et des expressions régulières, et calculer des dates relatives.
@@ -123,7 +123,7 @@ pytest
 - Écrire des **tests automatisés** avec pytest, en simulant les services externes (faux serveur IMAP, fausse IA).
 - Soigner l'**expérience utilisateur** : interface responsive, mode sombre, annulation, messages d'erreur clairs en français.
 
-## 🗺️ Prochaines étapes
+##  Prochaines étapes
 
 - [ ] Comptes utilisateurs, pour pouvoir mettre l'application en ligne
 - [ ] Transcription vocale côté serveur (Whisper) pour tous les navigateurs
