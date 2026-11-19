@@ -1,0 +1,1152 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mon organisateur</title>
+<style>
+  :root{
+    --bg:#f4f5fb; --side:#fbfbfe; --card:#ffffff; --fg:#1b1d2a; --mut:#6b7086; --line:#e6e8f0; --soft:#f0f1f8;
+    --acc:#5046e5; --acc-soft:#ecebfd; --acc-fg:#ffffff; --ok:#16a34a; --ok-soft:#e5f6ec; --bad:#dc2626; --bad-soft:#fdecec;
+    --t-task:#4f6bed; --t-reminder:#e08a0b; --t-event:#8b5cf6; --t-email_draft:#0e9fb8;
+    --shadow:0 1px 2px rgba(20,22,40,.04),0 2px 8px rgba(20,22,40,.05);
+    --shadow-lg:0 18px 50px rgba(20,22,40,.22);
+    --r:14px;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0f1017; --side:#13141d; --card:#1a1c27; --fg:#eceef6; --mut:#9a9fb5; --line:#2a2d3c; --soft:#222533;
+    --acc:#8b85ff; --acc-soft:#26244a; --acc-fg:#0e0d22; --ok:#4ade80; --ok-soft:#163323; --bad:#f87171; --bad-soft:#3a1d1f;
+    --t-task:#7c93ff; --t-reminder:#fbbf24; --t-event:#b39dfc; --t-email_draft:#38d0e6;
+    --shadow:0 1px 2px rgba(0,0,0,.3); --shadow-lg:0 18px 50px rgba(0,0,0,.5);
+  }}
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--fg);font:15.5px/1.5 "Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);padding:8px 14px;transition:background .15s,border-color .15s,transform .05s}
+  button:hover{background:var(--soft)}
+  button:active{transform:translateY(1px)}
+  button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+  .primary{background:var(--acc);border-color:var(--acc);color:var(--acc-fg);font-weight:600}
+  .primary:hover{background:var(--acc);filter:brightness(1.08)}
+
+  /* ---------- Layout ---------- */
+  .app{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+  .side{position:sticky;top:0;height:100vh;background:var(--side);border-right:1px solid var(--line);padding:22px 14px;display:flex;flex-direction:column;gap:6px;overflow-y:auto}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;padding:0 8px 18px}
+  .logo{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--acc),#8b5cf6);color:#fff;display:grid;place-items:center;font-size:17px;box-shadow:0 4px 12px color-mix(in srgb,var(--acc) 35%,transparent)}
+  .nav{display:flex;flex-direction:column;gap:2px}
+  .nav button{display:flex;align-items:center;gap:10px;border:0;background:transparent;text-align:left;padding:9px 10px;color:var(--mut);font-weight:500}
+  .nav button:hover{background:var(--soft);color:var(--fg)}
+  .nav button[aria-pressed=true]{background:var(--acc-soft);color:var(--acc);font-weight:600}
+  .nav .ico{width:22px;text-align:center}
+  .nav .n{margin-left:auto;font-size:12px;min-width:22px;text-align:center;border-radius:999px;padding:1px 7px;background:var(--soft);color:var(--mut)}
+  .nav button[aria-pressed=true] .n{background:var(--acc);color:var(--acc-fg)}
+  .nav .n:empty{display:none}
+  .side-title{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);padding:20px 10px 6px}
+  .filters{display:flex;flex-direction:column;gap:2px}
+  .filters button{display:flex;align-items:center;gap:10px;border:0;background:transparent;padding:7px 10px;color:var(--mut);font-size:14.5px}
+  .filters button:hover{background:var(--soft);color:var(--fg)}
+  .filters button[aria-pressed=true]{color:var(--fg);font-weight:600;background:var(--soft)}
+  .filters .dot{width:10px;height:10px;border-radius:3px;background:var(--mut)}
+  .filters .n{margin-left:auto;font-size:12.5px;opacity:.75}
+  .side-foot{margin-top:auto;padding:14px 10px 0;font-size:12.5px;color:var(--mut)}
+  .side-foot b{color:var(--ok);font-weight:600}
+
+  main{padding:28px 36px 110px;max-width:980px;width:100%}
+  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+  h1{font-size:28px;margin:0;letter-spacing:-.02em;line-height:1.15}
+  .today{color:var(--mut);font-size:15px;margin-top:3px}
+  .today::first-letter{text-transform:uppercase}
+
+  /* ---------- Stats ---------- */
+  .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);text-align:left;display:flex;flex-direction:column;gap:2px}
+  .stat:hover{background:var(--card);border-color:color-mix(in srgb,var(--acc) 40%,var(--line))}
+  .stat .lab{font-size:13px;color:var(--mut);display:flex;align-items:center;gap:6px}
+  .stat .val{font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.2}
+  .stat .val small{font-size:14px;color:var(--mut);font-weight:500}
+  .stat.bad .val{color:var(--bad)}
+  .stat.good .val{color:var(--ok)}
+  .bar{height:6px;border-radius:99px;background:var(--soft);overflow:hidden;margin-top:6px}
+  .bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--acc),#8b5cf6);transition:width .4s}
+
+  /* ---------- Add box ---------- */
+  .add{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:8px 8px 8px 14px;box-shadow:var(--shadow);display:flex;align-items:flex-end;gap:8px;transition:border-color .15s,box-shadow .15s}
+  .add:focus-within{border-color:var(--acc);box-shadow:0 0 0 4px color-mix(in srgb,var(--acc) 14%,transparent)}
+  .add .plus{align-self:center;color:var(--acc);font-size:22px;line-height:1;font-weight:300}
+  .add textarea{flex:1;border:0;background:transparent;color:var(--fg);font:inherit;font-size:16px;resize:none;min-height:42px;max-height:140px;padding:9px 4px;outline:none}
+  #mic{display:flex;align-items:center;gap:6px;border-color:transparent;background:var(--soft);color:var(--fg)}
+  #mic.on{background:var(--bad);border-color:var(--bad);color:#fff}
+  #addBtn{padding:9px 20px}
+  #addBtn:disabled{opacity:.6;cursor:wait}
+  .hint{color:var(--mut);font-size:13px;margin:7px 4px 0;min-height:19px}
+  .examples{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .examples[hidden]{display:none}
+  .examples button{font-size:13px;padding:4px 11px;border-radius:999px;color:var(--mut);background:transparent}
+
+  /* ---------- Sections & items ---------- */
+  .sec{margin-top:26px}
+  .sec-h{display:flex;align-items:center;gap:8px;margin:0 2px 10px;font-size:15px;font-weight:700}
+  .sec-h .c{font-size:12px;font-weight:600;border-radius:999px;padding:1px 8px;background:var(--soft);color:var(--mut)}
+  .sec-h.late{color:var(--bad)} .sec-h.late .c{background:var(--bad-soft);color:var(--bad)}
+  .sec-h .sub{margin-left:auto;font-weight:400;font-size:13px;color:var(--mut)}
+  .list{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+  .item{border-top:1px solid var(--line);position:relative}
+  .item:first-child{border-top:0}
+  .item::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--c,var(--mut))}
+  .item.task{--c:var(--t-task)} .item.reminder{--c:var(--t-reminder)} .item.event{--c:var(--t-event)} .item.email_draft{--c:var(--t-email_draft)}
+  .item.new{animation:flash 1.6s ease-out}
+  @keyframes flash{from{background:color-mix(in srgb,var(--acc) 15%,transparent)}to{background:transparent}}
+  .line{display:flex;align-items:center;gap:12px;padding:12px 14px 12px 16px;cursor:pointer}
+  .line:hover{background:color-mix(in srgb,var(--soft) 60%,transparent)}
+  .tcol{flex:none;width:52px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--fg)}
+  .tcol.late{color:var(--bad)}
+  .tcol.none{color:var(--mut);font-weight:500;font-size:13px}
+  .check{flex:none;width:24px;height:24px;border-radius:50%;border:2px solid color-mix(in srgb,var(--mut) 70%,transparent);background:transparent;padding:0;display:grid;place-items:center;color:transparent;font-size:13px;line-height:1}
+  .check:hover{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}
+  .done .check{background:var(--ok);border-color:var(--ok);color:#fff}
+  .body{flex:1;min-width:0}
+  .title{overflow-wrap:anywhere;font-weight:500}
+  .done .title{text-decoration:line-through;color:var(--mut);font-weight:400}
+  .meta{display:flex;gap:10px;font-size:13px;color:var(--mut);flex-wrap:wrap;margin-top:1px}
+  .type{font-weight:600;color:var(--c)}
+  .pill{flex:none;font-size:12.5px;color:var(--mut);background:var(--soft);border-radius:999px;padding:3px 10px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .pill.late{color:var(--bad);background:var(--bad-soft);font-weight:600}
+  .chev{color:var(--mut);transition:transform .15s;font-size:18px}
+  .open .chev{transform:rotate(90deg)}
+
+  .details{display:none;padding:4px 16px 16px 52px;gap:12px}
+  .open .details{display:grid}
+  .details label{display:grid;gap:4px;font-size:12.5px;color:var(--mut);font-weight:600}
+  .details input,.details select,.details textarea{font:inherit;font-size:15px;font-weight:400;color:var(--fg);background:var(--soft);border:1px solid var(--line);border-radius:9px;padding:8px 10px;width:100%}
+  .details textarea{min-height:110px;resize:vertical}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .actions a,.actions button{font-size:13.5px;padding:6px 12px;text-decoration:none;color:var(--fg);border:1px solid var(--line);border-radius:9px;background:var(--card)}
+  .actions .del{color:var(--bad);margin-left:auto}
+  .saved{font-size:12px;color:var(--ok);opacity:0;transition:opacity .3s}
+  .saved.show{opacity:1}
+
+  .empty{text-align:center;color:var(--mut);padding:44px 20px;background:var(--card);border:1px dashed var(--line);border-radius:var(--r)}
+  .empty .big{font-size:42px;margin-bottom:6px}
+  .empty b{color:var(--fg);display:block;font-size:17px;margin-bottom:2px}
+  .empty.small{padding:20px}
+  .toggle-done{margin-top:20px;font-size:14px;color:var(--mut);background:transparent}
+
+  /* ---------- Calendar ---------- */
+  .cal{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-top:22px}
+  .cal-head{display:flex;align-items:center;gap:6px;margin-bottom:12px}
+  .cal-head h3{margin:0 8px;font-size:19px;flex:1;letter-spacing:-.01em}
+  .cal-head h3::first-letter{text-transform:uppercase}
+  .cal-head button{padding:5px 12px}
+  .wk,.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+  .wk span{font-size:11.5px;font-weight:700;color:var(--mut);text-align:center;text-transform:uppercase;letter-spacing:.06em;padding-bottom:4px}
+  .day{min-height:100px;padding:5px;border-radius:10px;border:1px solid var(--line);background:var(--card);display:flex;flex-direction:column;gap:3px;align-items:stretch;justify-content:flex-start;text-align:left;overflow:hidden}
+  .day:hover{background:var(--soft);border-color:color-mix(in srgb,var(--acc) 35%,var(--line))}
+  .day.out{opacity:.4}
+  .day.weekend:not(.out){background:color-mix(in srgb,var(--soft) 55%,var(--card))}
+  .day .num{font-size:13px;font-weight:600;width:26px;height:26px;display:grid;place-items:center;border-radius:50%;flex:none}
+  .day.is-today .num{background:var(--acc);color:var(--acc-fg)}
+  .day.sel{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+  .chip{font-size:11.5px;line-height:1.45;padding:1px 6px;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:color-mix(in srgb,currentColor 13%,transparent);font-weight:500}
+  .chip.task{color:var(--t-task)}.chip.reminder{color:var(--t-reminder)}.chip.event{color:var(--t-event)}.chip.email_draft{color:var(--t-email_draft)}
+  .chip.done{text-decoration:line-through;opacity:.5}
+  .more{font-size:11px;color:var(--mut);padding-left:4px}
+  .dots{display:none;gap:3px;flex-wrap:wrap;padding:0 3px}
+  .dots i{width:6px;height:6px;border-radius:50%}
+  .dots i.task{background:var(--t-task)}.dots i.reminder{background:var(--t-reminder)}.dots i.event{background:var(--t-event)}.dots i.email_draft{background:var(--t-email_draft)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--mut);margin-top:12px}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .legend i{width:10px;height:10px;border-radius:3px}
+
+  /* ---------- Mail ---------- */
+  .mail-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:26px 2px 10px}
+  .mail-head h2{margin:0;font-size:17px}
+  .mail-head .addr{color:var(--mut);font-size:13.5px}
+  .mail-head .acts{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+  .mail-head .acts a,.mail-head .acts button{font-size:13.5px;padding:6px 12px;text-decoration:none;color:var(--fg);border:1px solid var(--line);border-radius:9px;background:var(--card)}
+  .mrow{display:flex;gap:12px;padding:13px 16px;border-top:1px solid var(--line);align-items:flex-start}
+  .mrow:first-child{border-top:0}
+  .avatar-c{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#fff;font-size:15px}
+  .mbody{flex:1;min-width:0}
+  .mtop{display:flex;gap:8px;align-items:baseline}
+  .mfrom{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mtime{margin-left:auto;flex:none;font-size:12.5px;color:var(--mut)}
+  .msubj{font-weight:500;overflow-wrap:anywhere}
+  .msnip{font-size:13.5px;color:var(--mut);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .mrow .totask{flex:none;font-size:12.5px;padding:5px 10px;align-self:center}
+  .mrow.new-mail{background:color-mix(in srgb,var(--acc) 7%,transparent)}
+  .setup{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:22px;margin-top:26px;display:grid;gap:16px}
+  .setup h2{margin:0;font-size:20px}
+  .setup p{margin:0;color:var(--mut)}
+  .mail-form{display:grid;gap:12px;max-width:460px}
+  .mail-form label{display:grid;gap:4px;font-size:13px;font-weight:600;color:var(--mut)}
+  .mail-form input{font:inherit;font-size:15px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+  .mail-form .err{color:var(--bad);font-size:14px;min-height:0}
+  .mail-form .row{display:flex;gap:8px;align-items:center}
+  .safe{font-size:13px;color:var(--mut);margin:0}
+  .providers{display:flex;gap:8px;flex-wrap:wrap}
+  .providers button{border-radius:999px;padding:7px 14px;font-weight:500}
+  .providers button[aria-pressed=true]{background:var(--acc);border-color:var(--acc);color:var(--acc-fg);font-weight:600}
+  .steps{display:grid;gap:12px;counter-reset:step}
+  .step{display:grid;grid-template-columns:36px 1fr;gap:12px;align-items:start;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .step::before{counter-increment:step;content:counter(step);width:32px;height:32px;border-radius:50%;background:var(--acc);color:var(--acc-fg);display:grid;place-items:center;font-weight:700}
+  .step h3{margin:4px 0 4px;font-size:16px}
+  .step p{margin:0 0 8px;color:var(--mut);font-size:14px}
+  .step p:last-child{margin-bottom:0}
+  .step .go{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;text-decoration:none;color:var(--acc);background:var(--acc-soft);border-radius:9px;padding:7px 12px}
+  .step code{background:var(--soft);border-radius:6px;padding:1px 6px;font-size:13.5px}
+  .warn{background:var(--bad-soft);color:var(--fg);border-radius:12px;padding:12px 14px;font-size:14px}
+  .warn b{color:var(--bad)}
+
+  /* ---------- Enlarged day ---------- */
+  #dayDlg{width:min(640px,calc(100% - 24px));max-height:calc(100% - 40px);border:0;border-radius:20px;padding:0;background:var(--bg);color:var(--fg);box-shadow:var(--shadow-lg)}
+  #dayDlg::backdrop{background:rgba(12,12,25,.5);backdrop-filter:blur(2px)}
+  .dlg-head{display:flex;align-items:flex-start;gap:12px;padding:22px 22px 10px;position:sticky;top:0;background:var(--bg);z-index:1}
+  .dlg-head h2{all:unset;display:block;font-size:27px;font-weight:700;line-height:1.2;letter-spacing:-.02em}
+  .dlg-head h2::first-letter{text-transform:uppercase}
+  .dlg-kicker{color:var(--acc);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+  .dlg-head .x{margin-left:auto;font-size:16px;padding:6px 12px;border-radius:50%}
+  .dlg-nav{display:flex;gap:6px;padding:0 22px 14px;align-items:center}
+  .dlg-nav button{font-size:13.5px;padding:5px 12px}
+  .dlg-nav .count{margin-left:auto;font-size:13.5px;color:var(--mut)}
+  #dayBody{padding:0 22px}
+  #dayBody .line{padding:16px 16px 16px 18px}
+  #dayBody .title{font-size:18px}
+  #dayBody .tcol{font-size:19px;width:62px}
+  .dlg-empty{text-align:center;color:var(--mut);padding:34px 10px;font-size:16px;background:var(--card);border:1px dashed var(--line);border-radius:var(--r)}
+  .dlg-add{display:flex;gap:8px;padding:16px 22px 8px}
+  .dlg-add input{flex:1;font:inherit;font-size:16px;padding:11px 13px;border-radius:11px;border:1px solid var(--line);background:var(--card);color:var(--fg)}
+  .ask{display:block;margin:4px 22px 22px;width:calc(100% - 44px);font-weight:600;padding:11px;background:var(--acc-soft);border-color:transparent;color:var(--acc)}
+  .ask:hover{background:var(--acc-soft);filter:brightness(.97)}
+
+  /* ---------- Assistant ---------- */
+  .fab{position:fixed;right:24px;bottom:24px;z-index:20;border-radius:999px;padding:13px 20px;box-shadow:0 8px 24px color-mix(in srgb,var(--acc) 40%,transparent);display:flex;align-items:center;gap:8px}
+  #asst{position:fixed;right:24px;bottom:24px;z-index:30;width:min(400px,calc(100% - 24px));height:min(640px,calc(100% - 48px));background:var(--bg);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden}
+  #asst[hidden]{display:none}
+  .asst-head{display:flex;align-items:center;gap:10px;padding:12px 14px;background:linear-gradient(135deg,var(--acc),#8b5cf6);color:#fff}
+  .asst-head .avatar{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.2);display:grid;place-items:center;font-size:18px}
+  .asst-head .who{flex:1;line-height:1.25}
+  .asst-head .who b{display:block;font-size:15px}
+  .asst-head .who small{opacity:.85;font-size:12px}
+  .asst-head button{padding:5px 10px;background:rgba(255,255,255,.18);border-color:transparent;color:#fff}
+  .asst-head button:hover{background:rgba(255,255,255,.3)}
+  #voiceBtn[aria-pressed=false]{opacity:.6}
+  #msgs{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:8px}
+  .msg{max-width:85%;padding:9px 13px;border-radius:16px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14.5px;line-height:1.45}
+  .msg.bot{background:var(--card);border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:5px;box-shadow:var(--shadow)}
+  .msg.me{background:var(--acc);color:var(--acc-fg);align-self:flex-end;border-bottom-right-radius:5px}
+  .msg.alert{background:color-mix(in srgb,var(--t-reminder) 15%,var(--card));border-color:color-mix(in srgb,var(--t-reminder) 50%,var(--line))}
+  .msg.typing{color:var(--mut)}
+  .sugg{display:flex;gap:6px;overflow-x:auto;padding:0 14px 10px;scrollbar-width:none}
+  .sugg button{flex:none;font-size:13px;padding:5px 11px;border-radius:999px;color:var(--acc);background:var(--acc-soft);border-color:transparent}
+  #asstForm{display:flex;gap:6px;padding:10px;border-top:1px solid var(--line);background:var(--card)}
+  #asstForm input{flex:1;min-width:0;font:inherit;padding:9px 12px;border-radius:11px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+  #asstMic{background:var(--soft);border-color:transparent}
+  #asstMic.on{background:var(--bad);color:#fff}
+
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(140px);background:var(--fg);color:var(--bg);border-radius:12px;padding:10px 16px;display:flex;gap:14px;align-items:center;transition:transform .25s,opacity .25s,visibility .25s;max-width:calc(100% - 32px);z-index:40;box-shadow:var(--shadow-lg);font-size:14.5px;opacity:0;visibility:hidden}
+  #toast.show{transform:translateX(-50%) translateY(0);opacity:1;visibility:visible}
+  #toast button{background:transparent;color:var(--bg);border-color:transparent;font-weight:700;padding:2px 6px;text-decoration:underline}
+
+  /* ---------- Tablet / phone ---------- */
+  @media (max-width:900px){
+    .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media (max-width:760px){
+    .app{display:block}
+    .side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);padding:14px 16px 10px;gap:0}
+    .brand{padding:0 0 10px}
+    .side-title,.side-foot{display:none}
+    .filters{flex-direction:row;overflow-x:auto;gap:6px;scrollbar-width:none}
+    .filters button{flex:none;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13.5px;background:var(--card)}
+    .filters button[aria-pressed=true]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+    /* sections become a bottom tab bar */
+    .nav{position:fixed;left:0;right:0;bottom:0;z-index:25;flex-direction:row;background:var(--card);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom));box-shadow:0 -4px 16px rgba(0,0,0,.06)}
+    .nav button{flex:1;flex-direction:column;gap:1px;padding:6px 4px;font-size:12px;border-radius:10px}
+    .nav .ico{font-size:19px;width:auto}
+    .nav .n{display:none}
+    .nav .long{display:none}
+    main{padding:18px 16px 150px}
+    h1{font-size:24px}
+    .stats{gap:8px}
+    .stat{padding:11px 13px}
+    .stat .val{font-size:22px}
+    #mic .lbl{display:none}
+    .details{padding-left:16px}
+    .two{grid-template-columns:1fr}
+    .cal{padding:8px}
+    .cal-head h3{font-size:16px;margin:0 2px}
+    .cal-head button{padding:4px 9px}
+    .wk,.grid{gap:2px}
+    .day{min-height:52px;align-items:center;border-radius:8px}
+    .chip,.more{display:none}
+    .dots{display:flex;justify-content:center}
+    #asst{right:0;bottom:0;width:100%;height:100%;border-radius:0;border:0}
+    #dayDlg{width:100%;max-width:100%;height:100%;max-height:100%;border-radius:0;margin:0}
+    .fab{right:14px;bottom:78px;padding:12px 16px}
+    .fab .long{display:none}
+    #toast{bottom:140px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><span class="logo">✓</span> Mon organisateur</div>
+    <nav class="nav" id="viewbar" aria-label="Sections">
+      <button data-view="today"><span class="ico">☀️</span> Aujourd'hui <span class="n" id="nToday"></span></button>
+      <button data-view="list"><span class="ico">🗂️</span> <span>Tâches<span class="long"> à faire</span></span> <span class="n" id="nAll"></span></button>
+      <button data-view="cal"><span class="ico">📅</span> Calendrier</button>
+      <button data-view="mail"><span class="ico">📬</span> <span>Mails<span class="long"> reçus</span></span> <span class="n" id="nMail"></span></button>
+    </nav>
+    <div class="side-title">Catégories</div>
+    <div class="filters" id="filters" role="group" aria-label="Filtrer par catégorie"></div>
+    <div class="side-foot">Mode <b>gratuit</b> · tes tâches et ton compte mail restent sur ton ordinateur</div>
+  </aside>
+
+  <main>
+    <header class="top">
+      <div>
+        <h1 id="hello">Bonjour 👋</h1>
+        <div class="today" id="today"></div>
+      </div>
+    </header>
+
+    <section class="stats" id="stats" aria-label="Résumé"></section>
+
+    <section>
+      <div class="add">
+        <span class="plus" aria-hidden="true">+</span>
+        <textarea id="txt" rows="1" aria-label="Que dois-tu faire ?" placeholder="Que dois-tu faire ? Écris ou parle normalement…"></textarea>
+        <button id="mic" type="button" title="Parler (Chrome / Edge)">🎙 <span class="lbl">Parler</span></button>
+        <button id="addBtn" class="primary" type="button">Ajouter</button>
+      </div>
+      <div class="hint" id="hint">Astuce : tu peux écrire plusieurs choses d'un coup, avec « puis ». Entrée pour ajouter.</div>
+      <div class="examples" id="examples"></div>
+    </section>
+
+    <div id="groups"></div>
+    <button class="toggle-done" id="toggleDone" hidden></button>
+    <div id="doneGroup"></div>
+  </main>
+</div>
+
+<dialog id="dayDlg" aria-labelledby="dayTitle">
+  <div class="dlg-head">
+    <div><div class="dlg-kicker" id="dayKicker"></div><h2 id="dayTitle"></h2></div>
+    <button class="x" id="dayClose" aria-label="Fermer">✕</button>
+  </div>
+  <div class="dlg-nav">
+    <button data-dstep="-1">‹ Veille</button>
+    <button data-dstep="1">Lendemain ›</button>
+    <span class="count" id="dayCount"></span>
+  </div>
+  <div id="dayBody"></div>
+  <div class="dlg-add">
+    <input id="dayInput" aria-label="Ajouter à ce jour" placeholder="Ajouter à ce jour… ex : appeler Ali à 15h">
+    <button id="dayAdd" class="primary" type="button">Ajouter</button>
+  </div>
+  <button class="ask" id="dayAsk" type="button">🗣 Demander à l'assistant d'organiser ce jour</button>
+</dialog>
+
+<button class="fab primary" id="asstBtn" type="button">💬 <span class="long">Assistant</span></button>
+<aside id="asst" hidden aria-label="Assistant">
+  <div class="asst-head">
+    <span class="avatar">🤖</span>
+    <div class="who"><b>Ton assistant</b><small id="asstMode">gratuit, hors-ligne</small></div>
+    <button id="voiceBtn" type="button" aria-pressed="true" title="Lire les réponses à voix haute">🔊</button>
+    <button id="asstClose" type="button" aria-label="Fermer">✕</button>
+  </div>
+  <div id="msgs" aria-live="polite"></div>
+  <div class="sugg" id="sugg"></div>
+  <form id="asstForm">
+    <button type="button" id="asstMic" title="Parler">🎙</button>
+    <input id="asstIn" autocomplete="off" aria-label="Message à l'assistant" placeholder="Écris ou parle…">
+    <button class="primary" type="submit">Envoyer</button>
+  </form>
+</aside>
+
+<div id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button id="toastBtn" hidden>Annuler</button></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const TYPES = {
+  task:        {label:"Tâche",      plural:"Tâches",     icon:"☐"},
+  reminder:    {label:"Rappel",     plural:"Rappels",    icon:"⏰"},
+  event:       {label:"Rendez-vous",plural:"Rendez-vous",icon:"📅"},
+  email_draft: {label:"Mail",       plural:"Mails",      icon:"✉️"},
+};
+const EXAMPLES = [
+  "Rappelle-moi d'appeler le fournisseur demain à 10h",
+  "Réunion avec Sami lundi à 14h30",
+  "Envoie un mail à Ali pour le devis",
+  "Finir le rapport, puis acheter du papier",
+];
+
+let items = [];
+let filter = "all";
+let showDone = false;
+let openId = null;
+let newIds = new Set();
+const pendingDelete = new Map();   // id -> timeout
+
+function ymd(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+let view = (()=>{ try{ const v = localStorage.getItem("view"); return ["today","list","cal","mail"].includes(v) ? v : "today"; }catch{ return "today"; } })();
+let selDay = ymd(new Date());                         // day picked in the calendar
+let calMonth = new Date(); calMonth.setDate(1);       // month shown in the calendar
+const dayLabel = key => new Date(key+"T00:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
+
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function localNowISO(){const d=new Date();return new Date(d-d.getTimezoneOffset()*60000).toISOString().slice(0,19)}
+function dayStart(d){const x=new Date(d);x.setHours(0,0,0,0);return x}
+function daysFromToday(d){return Math.round((dayStart(d)-dayStart(new Date()))/86400000)}
+const fmtTime = d => d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+const fmtDay  = d => d.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"});
+const plural = (n, w) => `${n} ${w}${n>1?"s":""}`;
+
+async function api(path, opts={}){
+  const r = await fetch(path,{headers:{"Content-Type":"application/json"},...opts});
+  if(!r.ok) throw new Error((await r.json().catch(()=>({}))).detail || "Erreur "+r.status);
+  return r.status===204 ? null : r.json();
+}
+
+/* ---------- Toast ---------- */
+let toastTimer;
+function toast(msg, undo){
+  $("toastMsg").textContent = msg;
+  $("toastBtn").hidden = !undo;
+  $("toastBtn").onclick = () => { undo(); hideToast(); };
+  $("toast").classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, undo ? 5000 : 2600);
+}
+function hideToast(){ $("toast").classList.remove("show"); }
+
+/* ---------- Grouping ---------- */
+function groupOf(it){
+  if(!it.when) return "nodate";
+  const n = daysFromToday(new Date(it.when));
+  if(n < 0) return "late";
+  if(n === 0) return "today";
+  if(n === 1) return "tomorrow";
+  if(n <= 7) return "week";
+  return "later";
+}
+const GROUPS = [
+  ["late","En retard"],["today","Aujourd'hui"],["tomorrow","Demain"],
+  ["week","Cette semaine"],["later","Plus tard"],["nodate","Sans date"],
+];
+function whenLabel(it, group){
+  if(!it.when) return "";
+  const d = new Date(it.when);
+  if(group==="today" || group==="tomorrow") return fmtTime(d);
+  return `${fmtDay(d)} · ${fmtTime(d)}`;
+}
+
+/* ---------- Render ---------- */
+function visible(){ return items.filter(i => !pendingDelete.has(i.id)); }
+function render(){ renderMain(); renderDay(); }
+
+function sectionHTML(title, list, opts={}){
+  if(!list.length) return "";
+  return `<section class="sec">
+    <h2 class="sec-h ${opts.cls||""}">${title} <span class="c">${list.length}</span>${opts.sub?`<span class="sub">${opts.sub}</span>`:""}</h2>
+    <div class="list">${list.map(i=>itemHTML(i, opts.group||"later", {timeCol:opts.timeCol})).join("")}</div>
+  </section>`;
+}
+
+/* ---------- Enlarged day ---------- */
+const dlg = $("dayDlg");
+function openDay(key){
+  selDay = key; openId = null;
+  const d = new Date(key+"T00:00");
+  if(d.getMonth()!==calMonth.getMonth() || d.getFullYear()!==calMonth.getFullYear()){ calMonth = new Date(d); calMonth.setDate(1); }
+  if(!dlg.open) dlg.showModal();
+  render();
+}
+function renderDay(){
+  if(!dlg.open) return;
+  const n = daysFromToday(new Date(selDay+"T00:00"));
+  $("dayKicker").textContent = n===0 ? "Aujourd'hui" : n===1 ? "Demain" : n===-1 ? "Hier" : n>1 ? `Dans ${n} jours` : `Il y a ${-n} jours`;
+  $("dayTitle").textContent = dayLabel(selDay);
+  const list = visible().filter(i=>i.when && i.when.startsWith(selDay)).sort((a,b)=>a.when.localeCompare(b.when));
+  const left = list.filter(i=>!i.done).length;
+  $("dayCount").textContent = list.length ? (left ? `${plural(left,"chose")} à faire` : "Tout est fait 🎉") : "";
+  $("dayBody").innerHTML = list.length
+    ? `<div class="list">${list.map(i=>itemHTML(i,"today",{timeCol:true, inDlg:true})).join("")}</div>`
+    : `<div class="dlg-empty">🌤️<br>Rien de prévu ce jour-là.<br>Ajoute quelque chose ci-dessous, ou demande à l'assistant.</div>`;
+}
+$("dayClose").onclick = () => dlg.close();
+dlg.addEventListener("click", e => { if(e.target===dlg) dlg.close(); });   // click on the dark background
+dlg.addEventListener("close", () => { openId = null; render(); });
+dlg.querySelector(".dlg-nav").onclick = e => {
+  const b = e.target.closest("[data-dstep]"); if(!b) return;
+  const d = new Date(selDay+"T00:00"); d.setDate(d.getDate() + +b.dataset.dstep);
+  openDay(ymd(d));
+};
+async function dayAdd(){
+  const text = $("dayInput").value.trim(); if(!text) return $("dayInput").focus();
+  $("dayAdd").disabled = true;
+  try{ await addText(text, selDay); $("dayInput").value = ""; }
+  finally{ $("dayAdd").disabled = false; $("dayInput").focus(); }
+}
+$("dayAdd").onclick = dayAdd;
+$("dayInput").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); dayAdd(); } });
+$("dayAsk").onclick = () => { dlg.close(); openAssistant(false); sendToAssistant("Organise ma journée", selDay); };
+
+/* ---------- Main page ---------- */
+function renderMain(){
+  const all = visible();
+  const todo = all.filter(i=>!i.done), done = all.filter(i=>i.done);
+  const pass = i => filter==="all" || i.type===filter;
+
+  // Greeting
+  const h = new Date().getHours();
+  $("hello").textContent = h < 5 ? "Bonne nuit 🌙" : h < 12 ? "Bonjour ☀️" : h < 18 ? "Bon après-midi 👋" : "Bonsoir 🌙";
+  $("today").textContent = new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+
+  // Summary cards
+  const todayAll = all.filter(i=>groupOf(i)==="today");
+  const todayDone = todayAll.filter(i=>i.done).length;
+  const late = todo.filter(i=>groupOf(i)==="late").length;
+  const week = todo.filter(i=>i.when && daysFromToday(new Date(i.when))>=0 && daysFromToday(new Date(i.when))<=7).length;
+  const pct = todayAll.length ? Math.round(todayDone/todayAll.length*100) : 0;
+  $("stats").innerHTML = `
+    <button class="stat" data-go="today"><span class="lab">☀️ Aujourd'hui</span>
+      <span class="val">${todayDone}<small> / ${todayAll.length} fait${todayDone>1?"s":""}</small></span>
+      <span class="bar"><i style="width:${pct}%"></i></span></button>
+    <button class="stat ${late?"bad":"good"}" data-go="late"><span class="lab">⚠️ En retard</span>
+      <span class="val">${late}</span><span class="lab">${late?"à rattraper":"rien en retard 👍"}</span></button>
+    <button class="stat" data-go="cal"><span class="lab">📅 7 prochains jours</span>
+      <span class="val">${week}</span><span class="lab">prévu${week>1?"s":""}</span></button>
+    <button class="stat good" data-go="done"><span class="lab">✅ Terminées</span>
+      <span class="val">${done.length}</span><span class="lab">au total</span></button>`;
+
+  // Side menu
+  for(const b of $("viewbar").children) b.setAttribute("aria-pressed", b.dataset.view===view);
+  const todayCount = todo.filter(i=>["today","late"].includes(groupOf(i))).length;
+  $("nToday").textContent = todayCount || "";
+  $("nAll").textContent = todo.length || "";
+  $("nMail").textContent = mailData?.ok && mailData.unread ? mailData.unread : "";
+  const count = t => todo.filter(i=>t==="all"||i.type===t).length;
+  const COLORS = {all:"var(--mut)", task:"var(--t-task)", reminder:"var(--t-reminder)", event:"var(--t-event)", email_draft:"var(--t-email_draft)"};
+  $("filters").innerHTML = [["all","Tout"],...Object.entries(TYPES).map(([k,v])=>[k,v.plural])]
+    .map(([k,l])=>`<button data-f="${k}" aria-pressed="${filter===k}"><span class="dot" style="background:${COLORS[k]}"></span>${l}<span class="n">${count(k)}</span></button>`).join("");
+
+  // Add box
+  const narrow = innerWidth < 760;
+  $("txt").placeholder = view==="cal"
+    ? (narrow ? `Ajouter au ${new Date(selDay+"T00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short"})}…` : `Ajouter au ${dayLabel(selDay)}… (ou dis une autre date)`)
+    : (narrow ? "Que dois-tu faire ?" : "Que dois-tu faire ? Écris ou parle normalement…");
+  $("examples").hidden = all.length > 0;      // examples only for a new user: less clutter
+
+  $("toggleDone").hidden = true; $("doneGroup").innerHTML = "";
+  if(view==="mail"){ $("groups").innerHTML = mailHTML(); newIds.clear(); return; }
+  if(view==="cal"){ $("groups").innerHTML = calendarHTML(pass); newIds.clear(); return; }
+  if(view==="today"){ $("groups").innerHTML = todayHTML(pass); newIds.clear(); return; }
+
+  // "Tâches à faire": everything, grouped by when
+  const shown = todo.filter(pass);
+  if(!all.length){
+    $("groups").innerHTML = `<div class="empty sec"><div class="big">🗂️</div><b>Rien pour l'instant</b>Écris ce que tu as à faire en haut — même plusieurs choses d'un coup.</div>`;
+  } else if(!shown.length){
+    $("groups").innerHTML = `<div class="empty sec"><div class="big">🎉</div><b>${filter==="all"?"Tout est fait. Bravo !":"Rien dans cette catégorie."}</b></div>`;
+  } else {
+    $("groups").innerHTML = GROUPS.map(([g,label])=>sectionHTML(label, shown.filter(i=>groupOf(i)===g), {group:g, cls:g==="late"?"late":""})).join("");
+  }
+  const doneShown = done.filter(pass);
+  $("toggleDone").hidden = !doneShown.length;
+  $("toggleDone").textContent = showDone ? "Masquer les tâches terminées" : `✅ Voir les tâches terminées (${doneShown.length})`;
+  $("doneGroup").innerHTML = showDone ? sectionHTML("Terminées", doneShown.slice().reverse(), {group:"done"}) : "";
+  newIds.clear();
+}
+
+function todayHTML(pass){
+  const all = visible().filter(pass);
+  const todo = all.filter(i=>!i.done);
+  const late = todo.filter(i=>groupOf(i)==="late").sort((a,b)=>a.when.localeCompare(b.when));
+  const today = all.filter(i=>groupOf(i)==="today").sort((a,b)=>a.when.localeCompare(b.when));
+  const noDate = todo.filter(i=>!i.when);
+  const tomorrow = todo.filter(i=>groupOf(i)==="tomorrow").sort((a,b)=>a.when.localeCompare(b.when));
+  const left = today.filter(i=>!i.done).length;
+  let html = sectionHTML("En retard", late, {cls:"late", group:"later", sub:"à faire en premier"});
+  html += today.length
+    ? sectionHTML("Aujourd'hui", today, {timeCol:true, group:"today", sub: left ? `${plural(left,"chose")} à faire` : "tout est fait 🎉"})
+    : `<section class="sec"><h2 class="sec-h">Aujourd'hui</h2><div class="empty small">🌤️ Rien de prévu aujourd'hui. Profite, ou ajoute quelque chose en haut.</div></section>`;
+  html += sectionHTML("À placer", noDate, {group:"nodate", sub:"sans date · l'assistant peut les organiser"});
+  html += sectionHTML("Demain", tomorrow, {timeCol:true, group:"tomorrow"});
+  return html;
+}
+
+function calendarHTML(pass){
+  const byDay = {};
+  for(const i of visible()) if(i.when && pass(i)) (byDay[i.when.slice(0,10)] ||= []).push(i);
+  Object.values(byDay).forEach(l => l.sort((a,b)=>a.when.localeCompare(b.when)));
+
+  const month = calMonth.getMonth();
+  const start = new Date(calMonth.getFullYear(), month, 1);
+  start.setDate(1 - ((start.getDay()+6) % 7));        // back to Monday
+  const todayKey = ymd(new Date());
+  let cells = "";
+  for(let k=0; k<42; k++){
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate()+k);
+    if(k===35 && d.getMonth()!==month) break;          // 5 rows are enough this month
+    const key = ymd(d), list = byDay[key] || [];
+    cells += `<button class="day ${d.getMonth()!==month?"out":""} ${k%7>4?"weekend":""} ${key===todayKey?"is-today":""} ${key===selDay?"sel":""}" data-day="${key}"
+        aria-label="${dayLabel(key)} : ${plural(list.length,"élément")}">
+      <span class="num">${d.getDate()}</span>
+      ${list.slice(0,3).map(i=>`<span class="chip ${i.type} ${i.done?"done":""}">${fmtTime(new Date(i.when))} ${esc(i.title)}</span>`).join("")}
+      ${list.length>3 ? `<span class="more">+${list.length-3} autre${list.length>4?"s":""}</span>` : ""}
+      <span class="dots">${list.slice(0,4).map(i=>`<i class="${i.type}"></i>`).join("")}</span>
+    </button>`;
+  }
+  const noDate = visible().filter(i=>!i.when && !i.done && pass(i));
+  return `<div class="cal">
+      <div class="cal-head">
+        <button data-cal="-1" aria-label="Mois précédent">‹</button>
+        <button data-cal="1" aria-label="Mois suivant">›</button>
+        <h3>${calMonth.toLocaleDateString("fr-FR",{month:"long",year:"numeric"})}</h3>
+        <button data-cal="0">Aujourd'hui</button>
+      </div>
+      <div class="wk">${["lun","mar","mer","jeu","ven","sam","dim"].map(x=>`<span>${x}</span>`).join("")}</div>
+      <div class="grid">${cells}</div>
+      <div class="legend">${Object.entries(TYPES).map(([k,v])=>`<span><i style="background:var(--t-${k})"></i>${v.plural}</span>`).join("")}<span style="margin-left:auto">Touche un jour pour l'ouvrir en grand</span></div>
+    </div>
+    ${sectionHTML("À placer", noDate, {group:"nodate", sub:"sans date"})}`;
+}
+
+/* ---------- Mail ---------- */
+let mailData = null;                 // last answer of GET /mail
+const freshMail = new Set();         // arrived while the page was open: highlighted
+const AV_COLORS = ["#5046e5","#e0567a","#0e9fb8","#e08a0b","#16a34a","#8b5cf6","#d9480f"];
+function avatarColor(s){ let h=0; for(const c of String(s)) h=(h*31+c.charCodeAt(0))>>>0; return AV_COLORS[h%AV_COLORS.length]; }
+function relTime(iso){ if(!iso) return ""; const d=new Date(iso), n=daysFromToday(d); return n===0 ? fmtTime(d) : n===-1 ? "hier" : fmtDay(d); }
+const busyTyping = () => !!document.activeElement?.closest(".details, .mail-form");
+
+function mailHTML(){
+  if(!mailData) return `<div class="empty sec">Chargement de ta boîte mail…</div>`;
+  if(!mailData.configured) return setupHTML();
+  if(!mailData.ok) return `<div class="setup"><div><h2>⚠️ Je n'arrive pas à lire tes mails</h2><p>${esc(mailData.error)}</p></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="primary" data-mail="refresh">Réessayer</button><button data-mail="disconnect">Changer de compte</button></div></div>`;
+  const list = mailData.emails;
+  const head = `<div class="mail-head">
+      <h2 class="sec-h" style="margin:0">📬 Mails non lus <span class="c">${mailData.unread}</span></h2>
+      <span class="addr">${esc(mailData.address)}</span>
+      <div class="acts"><button data-mail="refresh">↻ Actualiser</button>
+        ${mailData.webmail ? `<a href="${esc(mailData.webmail)}" target="_blank" rel="noopener">Ouvrir ma boîte mail ↗</a>` : ""}
+        <button data-mail="disconnect">Déconnecter</button></div>
+    </div>`;
+  const body = list.length
+    ? `<div class="list">${list.map(m=>`<div class="mrow ${freshMail.has(m.id)?"new-mail":""}">
+          <span class="avatar-c" style="background:${avatarColor(m.from_addr||m.from_name)}">${esc((m.from_name||"?").trim().charAt(0).toUpperCase())}</span>
+          <div class="mbody">
+            <div class="mtop"><span class="mfrom">${esc(m.from_name)}</span><span class="mtime">${esc(relTime(m.date))}</span></div>
+            <div class="msubj">${esc(m.subject)}</div>
+            ${m.snippet ? `<div class="msnip">${esc(m.snippet)}</div>` : ""}
+          </div>
+          <button class="totask" data-totask="${esc(m.id)}" title="Créer une tâche « Répondre à… »">➕ Tâche</button>
+        </div>`).join("")}</div>
+       ${mailData.unread > list.length ? `<p class="safe" style="margin-top:8px">+ ${mailData.unread-list.length} mails non lus plus anciens dans ta boîte.</p>` : ""}`
+    : `<div class="empty"><div class="big">📭</div><b>Aucun mail non lu</b>Ta boîte est à jour. Je t'annoncerai à voix haute les nouveaux mails.</div>`;
+  return head + body + `<p class="safe" style="margin-top:12px">🔒 Lecture seule : l'application ne supprime rien, n'envoie rien et ne marque pas tes mails comme lus.</p>`;
+}
+
+/* Step-by-step guide to connect a mailbox, one per email service. */
+const PROVIDERS = {
+  gmail: {name:"Gmail", placeholder:"prenom@gmail.com", code:"code de 16 lettres", steps:[
+    {t:"Active la validation en deux étapes", p:"Google l'exige pour créer un mot de passe d'application. Si elle est déjà activée, passe à l'étape 2.",
+     link:"https://myaccount.google.com/signinoptions/two-step-verification", btn:"Ouvrir la page Google"},
+    {t:"Crée un mot de passe d'application", p:"Écris un nom, par exemple <code>Organisateur</code>, puis clique sur <b>Créer</b>.",
+     link:"https://myaccount.google.com/apppasswords", btn:"Créer mon mot de passe d'application"},
+    {t:"Copie le code de 16 lettres", p:"Google affiche un code comme <code>abcd efgh ijkl mnop</code>. Copie-le (tu peux garder les espaces). Il ne s'affiche qu'une fois."},
+  ]},
+  yahoo: {name:"Yahoo", placeholder:"prenom@yahoo.fr", code:"code", steps:[
+    {t:"Ouvre la sécurité de ton compte Yahoo", p:"Connecte-toi si on te le demande.", link:"https://login.yahoo.com/account/security", btn:"Ouvrir la page Yahoo"},
+    {t:"Génère un mot de passe d'application", p:"Clique sur <b>Générer un mot de passe d'application</b>, écris <code>Organisateur</code>, puis <b>Générer</b>."},
+    {t:"Copie le code affiché", p:"Copie le code. Il ne s'affiche qu'une fois."},
+  ]},
+  icloud: {name:"iCloud", placeholder:"prenom@icloud.com", code:"code", steps:[
+    {t:"Ouvre ton compte Apple", p:"Connecte-toi avec ton identifiant Apple.", link:"https://account.apple.com", btn:"Ouvrir la page Apple"},
+    {t:"Crée un mot de passe pour app", p:"Va dans <b>Connexion et sécurité</b> → <b>Mots de passe pour app</b>, écris <code>Organisateur</code>, puis <b>Créer</b>."},
+    {t:"Copie le code affiché", p:"Il ressemble à <code>abcd-efgh-ijkl-mnop</code>. Copie-le tel quel."},
+  ]},
+  outlook: {name:"Outlook / Hotmail", placeholder:"prenom@outlook.fr", code:"code", warn:true, steps:[
+    {t:"Active la vérification en deux étapes", p:"Sur ton compte Microsoft, dans <b>Sécurité</b>.", link:"https://account.microsoft.com/security", btn:"Ouvrir la page Microsoft"},
+    {t:"Crée un mot de passe d'application", p:"Dans <b>Options de sécurité avancées</b> → <b>Mots de passe d'application</b> → <b>Créer</b>."},
+    {t:"Copie le code affiché", p:"Copie le code. Il ne s'affiche qu'une fois."},
+  ]},
+  other: {name:"Autre", placeholder:"prenom@exemple.com", code:"mot de passe", other:true, steps:[
+    {t:"Demande les informations à ton fournisseur d'email", p:"Il te faut : un <b>mot de passe d'application</b> (ou ton mot de passe IMAP) et, si l'application ne le trouve pas toute seule, le nom du <b>serveur IMAP</b> (ex : <code>imap.exemple.com</code>)."},
+  ]},
+};
+let mailProvider = "gmail";
+const mailDraft = {address:"", password:"", host:""};   // kept in memory only, so switching tabs doesn't erase it
+
+function setupHTML(){
+  const P = PROVIDERS[mailProvider];
+  const steps = P.steps.map(s=>`<div class="step"><div>
+      <h3>${s.t}</h3><p>${s.p}</p>
+      ${s.link ? `<p><a class="go" href="${s.link}" target="_blank" rel="noopener">${s.btn} ↗</a></p>` : ""}
+    </div></div>`).join("");
+  return `<div class="setup">
+    <div><h2>📬 Connecte ton email en ${P.steps.length + 1} étapes</h2>
+      <p>L'application lira tes nouveaux mails, et ton assistant te les annoncera à voix haute.</p></div>
+
+    <div><p style="margin-bottom:8px;color:var(--fg);font-weight:600">Quelle boîte mail utilises-tu ?</p>
+      <div class="providers">${Object.entries(PROVIDERS).map(([k,v])=>`<button type="button" data-provider="${k}" aria-pressed="${k===mailProvider}">${v.name}</button>`).join("")}</div></div>
+
+    ${P.warn ? `<div class="warn"><b>Attention :</b> Microsoft bloque souvent ce type de connexion pour les comptes personnels Outlook / Hotmail. Essaie quand même ; si ça ne marche pas, utilise une adresse Gmail ou Yahoo.</div>` : ""}
+
+    <div class="warn"><b>Important :</b> n'utilise <b>pas</b> ton mot de passe habituel. Il faut un <b>« mot de passe d'application »</b> : un code spécial, créé juste pour cette application, que tu peux supprimer quand tu veux.</div>
+
+    <div class="steps">
+      ${steps}
+      <div class="step"><div>
+        <h3>Colle ton adresse et le ${P.code} ici</h3>
+        <form class="mail-form" id="mailForm" autocomplete="off" style="margin-top:8px">
+          <label>Ton adresse email<input name="address" type="email" required placeholder="${P.placeholder}" value="${esc(mailDraft.address)}"></label>
+          <label>Mot de passe d'application<input name="password" type="password" required autocomplete="new-password" placeholder="Colle le code ici" value="${esc(mailDraft.password)}"></label>
+          <details ${P.other?"open":""}><summary style="cursor:pointer;color:var(--mut);font-size:13px">Options avancées</summary>
+            <label style="margin-top:8px">Serveur IMAP (seulement si l'application ne le trouve pas toute seule)<input name="host" placeholder="imap.exemple.com" value="${esc(mailDraft.host)}"></label></details>
+          <div class="err" id="mailErr" role="alert"></div>
+          <div class="row"><button class="primary" type="submit">Connecter mon email</button></div>
+        </form>
+      </div></div>
+    </div>
+
+    <p class="safe">🔒 Lecture seule : l'application ne peut rien envoyer, rien supprimer, et ne marque pas tes mails comme lus. Le code est enregistré uniquement sur ton ordinateur (dossier <code>data</code>), et le bouton « Déconnecter » l'efface.</p>
+  </div>`;
+}
+
+function mailSeen(){ try{ return JSON.parse(localStorage.getItem("mailSeen")||"null"); }catch{ return null; } }
+function saveMailSeen(ids){ try{ localStorage.setItem("mailSeen", JSON.stringify(ids.slice(-500))); }catch{} }
+function announceMail(){
+  if(!mailData?.ok) return;
+  const ids = mailData.emails.map(m=>m.id);
+  const seen = mailSeen();
+  if(seen===null){ saveMailSeen(ids); return; }          // first time: no flood of alerts for old mail
+  const known = new Set(seen);
+  const news = mailData.emails.filter(m=>!known.has(m.id));
+  if(news.length){
+    news.forEach(m=>freshMail.add(m.id));
+    const m = news[0];
+    if(news.length===1) alertNow(`Nouveau mail de ${m.from_name}`, m.subject, "📬");
+    else alertNow(`${news.length} nouveaux mails`, `Le plus récent vient de ${m.from_name} : ${m.subject}.`, "📬");
+  }
+  saveMailSeen([...seen, ...ids.filter(id=>!known.has(id))]);
+}
+async function loadMail(refresh=false){
+  try{ mailData = await api(`/mail${refresh ? "?refresh=true" : ""}`); }catch{ return; }
+  announceMail();
+  if(!busyTyping()) render();
+}
+
+function itemHTML(it, group, {timeCol=false, inDlg=false}={}){
+  const t = TYPES[it.type];
+  const late = !it.done && it.when && new Date(it.when) < new Date();
+  const wl = timeCol ? "" : whenLabel(it, group==="done" ? "later" : group);
+  // Edit panel only where the person is looking: in the day window when it is open, else in the page.
+  const isOpen = openId===it.id && inDlg===dlg.open;
+  return `<div class="item ${it.type} ${it.done?"done":""} ${isOpen?"open":""} ${newIds.has(it.id)?"new":""}" data-id="${it.id}">
+    <div class="line" data-act="toggleOpen">
+      ${timeCol ? `<span class="tcol ${late?"late":""} ${it.when?"":"none"}">${it.when ? fmtTime(new Date(it.when)) : "—"}</span>` : ""}
+      <button class="check" data-act="done" aria-label="${it.done?"Marquer à faire":"Marquer comme fait"}">✓</button>
+      <div class="body">
+        <div class="title">${esc(it.title)}</div>
+        <div class="meta"><span class="type">${t.icon} ${t.label}</span>${it.type==="email_draft"&&it.to?`<span>à ${esc(it.to)}</span>`:""}</div>
+      </div>
+      ${wl ? `<span class="pill ${late?"late":""}">${esc(wl)}</span>` : ""}
+      <span class="chev" aria-hidden="true">›</span>
+    </div>
+    ${isOpen ? detailsHTML(it) : ""}
+  </div>`;
+}
+
+function detailsHTML(it){
+  const mail = it.type==="email_draft";
+  const mailto = `mailto:?subject=${encodeURIComponent(it.subject||"")}&body=${encodeURIComponent(it.body||"")}`;
+  return `<div class="details">
+    <label>Titre<input data-f="title" value="${esc(it.title)}" maxlength="300"></label>
+    <div class="two">
+      <label>Type<select data-f="type">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}" ${k===it.type?"selected":""}>${v.label}</option>`).join("")}</select></label>
+      <label>Date et heure<input data-f="when" type="datetime-local" value="${esc((it.when||"").slice(0,16))}"></label>
+    </div>
+    ${mail ? `
+      <div class="two">
+        <label>Destinataire<input data-f="to" value="${esc(it.to)}"></label>
+        <label>Objet<input data-f="subject" value="${esc(it.subject)}"></label>
+      </div>
+      <label>Message<textarea data-f="body">${esc(it.body)}</textarea></label>` : ""}
+    <div class="actions">
+      ${mail ? `<a href="${esc(mailto)}">✉️ Ouvrir dans ma messagerie</a><button data-act="copy">📋 Copier</button>` : ""}
+      ${it.when ? `<a href="/items/${it.id}/ics" download>📅 Ajouter à mon agenda</a>` : ""}
+      <span class="saved" id="saved-${it.id}">Enregistré ✓</span>
+      <button class="del" data-act="delete">🗑 Supprimer</button>
+    </div>
+  </div>`;
+}
+
+/* ---------- Actions ---------- */
+async function load(){
+  try { items = await api("/items"); render(); }
+  catch(e){ $("groups").innerHTML = `<div class="empty sec">Impossible de charger : ${esc(e.message)}</div>`; }
+}
+
+async function addText(text, day){
+  try{
+    const body = {text, now:localNowISO()};
+    if(day) body.day = day;                          // undated items go on the picked day
+    const res = await api("/add",{method:"POST",body:JSON.stringify(body)});
+    res.items.forEach(i=>newIds.add(i.id));
+    items.push(...res.items);
+    // In the calendar, jump to the new item's day if it landed elsewhere.
+    const dated = res.items.filter(i=>i.when);
+    if(day && dated.length && !dated.some(i=>i.when.startsWith(selDay))){
+      selDay = dated[0].when.slice(0,10);
+      calMonth = new Date(selDay+"T00:00"); calMonth.setDate(1);
+    }
+    if(filter!=="all" && !res.items.some(i=>i.type===filter)) filter = "all";
+    render();
+    const n = res.items.length;
+    toast(n===1 ? `Ajouté : ${TYPES[res.items[0].type].label.toLowerCase()} « ${res.items[0].title} »` : `${n} éléments ajoutés`);
+    return true;
+  }catch(e){ toast("Erreur : "+e.message); return false; }
+}
+
+function autoGrow(){ const t=$("txt"); t.style.height="auto"; t.style.height=Math.min(t.scrollHeight,140)+"px"; }
+async function add(){
+  const text = $("txt").value.trim();
+  if(!text) { $("txt").focus(); return; }
+  $("addBtn").disabled = true;
+  if(await addText(text, view==="cal" ? selDay : null)){ $("txt").value = ""; autoGrow(); }
+  $("addBtn").disabled = false; $("txt").focus();
+}
+
+async function save(id, changes){
+  const it = items.find(i=>i.id===id);
+  Object.assign(it, changes);
+  try{
+    const upd = await api(`/items/${id}`,{method:"PATCH",body:JSON.stringify(changes)});
+    Object.assign(it, upd);
+    return true;
+  }catch(e){ toast("Erreur : "+e.message); load(); return false; }
+}
+
+async function toggleDone(id){
+  const it = items.find(i=>i.id===id);
+  const done = !it.done;
+  if(done && openId===id) openId = null;
+  await save(id,{done});
+  render();
+  if(done) toast(`Bravo ! « ${it.title} » est fait`, async ()=>{ await save(id,{done:false}); render(); });
+}
+
+function remove(id){
+  const it = items.find(i=>i.id===id);
+  if(openId===id) openId=null;
+  // Delete after 5 s so "Annuler" can bring it back.
+  pendingDelete.set(id, setTimeout(async ()=>{
+    pendingDelete.delete(id);
+    items = items.filter(i=>i.id!==id);
+    try{ await api(`/items/${id}`,{method:"DELETE"}); }catch(e){ toast("Erreur : "+e.message); load(); }
+  }, 5000));
+  render();
+  toast(`Supprimé : « ${it.title} »`, ()=>{ clearTimeout(pendingDelete.get(id)); pendingDelete.delete(id); render(); });
+}
+// Finish pending deletions if the page is closed.
+addEventListener("pagehide", ()=>{ for(const id of pendingDelete.keys()) fetch(`/items/${id}`,{method:"DELETE",keepalive:true}); });
+
+/* ---------- Events ---------- */
+function setView(v){
+  view = v; openId = null;
+  try{ localStorage.setItem("view", view); }catch{}
+  render(); scrollTo({top:0, behavior:"smooth"});
+}
+$("addBtn").onclick = add;
+$("txt").addEventListener("keydown", e=>{ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); add(); } });
+$("txt").addEventListener("input", autoGrow);
+$("examples").innerHTML = EXAMPLES.map(x=>`<button type="button">${esc(x)}</button>`).join("");
+$("examples").onclick = e=>{ if(e.target.tagName==="BUTTON"){ $("txt").value = e.target.textContent; $("txt").focus(); } };
+$("filters").onclick = e=>{ const b=e.target.closest("button"); if(b){ filter=b.dataset.f; render(); } };
+$("toggleDone").onclick = ()=>{ showDone=!showDone; render(); };
+$("viewbar").onclick = e=>{ const b = e.target.closest("[data-view]"); if(b) setView(b.dataset.view); };
+$("stats").onclick = e=>{
+  const b = e.target.closest("[data-go]"); if(!b) return;
+  const go = b.dataset.go;
+  if(go==="done"){ showDone = true; setView("list"); setTimeout(()=>$("doneGroup").scrollIntoView({behavior:"smooth"}), 50); }
+  else setView(go==="late" ? "today" : go);
+};
+$("groups").addEventListener("submit", async e=>{
+  if(e.target.id!=="mailForm") return;
+  e.preventDefault();
+  const f = new FormData(e.target), btn = e.target.querySelector("button[type=submit]");
+  btn.disabled = true; btn.textContent = "Connexion… (quelques secondes)"; $("mailErr").textContent = "";
+  try{
+    mailData = await api("/mail/connect",{method:"POST",body:JSON.stringify({
+      address: f.get("address"), password: f.get("password"), host: f.get("host") || null})});
+    saveMailSeen(mailData.emails.map(m=>m.id));          // already there: not announced as "new"
+    Object.assign(mailDraft, {address:"", password:"", host:""});
+    document.activeElement?.blur();
+    render();
+    const n = mailData.unread;
+    toast("Email connecté ✓");
+    bubble(`Ta boîte mail est connectée. Tu as ${n} mail${n>1?"s":""} non lu${n>1?"s":""}.`);
+  }catch(err){
+    btn.disabled = false; btn.textContent = "Connecter mon email";
+    $("mailErr").textContent = err.message;
+  }
+});
+$("groups").addEventListener("input", e=>{
+  const f = e.target.closest("#mailForm"); if(!f) return;
+  mailDraft[e.target.name] = e.target.value;
+  // Typing an address picks the right guide automatically.
+  if(e.target.name==="address"){
+    const d = e.target.value.split("@")[1]?.toLowerCase() || "";
+    const guess = /gmail|googlemail/.test(d) ? "gmail" : /yahoo/.test(d) ? "yahoo" : /icloud|me\.com|mac\.com/.test(d) ? "icloud"
+      : /outlook|hotmail|live|msn/.test(d) ? "outlook" : (d.includes(".") ? "other" : null);
+    if(guess && guess!==mailProvider){
+      mailProvider = guess;
+      render();
+      const a = $("mailForm").address; a.focus();   // cursor stays at the end of the address
+    }
+  }
+});
+$("groups").addEventListener("click", async e=>{
+  const pv = e.target.closest("[data-provider]");
+  if(pv){ mailProvider = pv.dataset.provider; render(); return; }
+  const mb = e.target.closest("[data-mail]");
+  if(mb){
+    if(mb.dataset.mail==="refresh"){ mb.disabled = true; mb.textContent = "Actualisation…"; await loadMail(true); toast("Boîte mail à jour"); }
+    else if(mb.dataset.mail==="disconnect" && confirm("Déconnecter ta boîte mail de l'application ?")){
+      await api("/mail/connect",{method:"DELETE"}); mailData = null; await loadMail(true);
+    }
+    return;
+  }
+  const tt = e.target.closest("[data-totask]");
+  if(tt){
+    const m = mailData.emails.find(x=>x.id===tt.dataset.totask); if(!m) return;
+    try{
+      const saved = await api("/items",{method:"POST",body:JSON.stringify([{type:"task", title:`Répondre à ${m.from_name} : ${m.subject}`.slice(0,300)}])});
+      items.push(...saved);
+      tt.disabled = true; tt.textContent = "✓ Ajoutée";
+      $("nAll").textContent = visible().filter(i=>!i.done).length;
+      toast(`Tâche ajoutée : « ${saved[0].title} »`);
+    }catch(err){ toast("Erreur : "+err.message); }
+    return;
+  }
+});
+$("groups").addEventListener("click", e=>{
+  const day = e.target.closest("[data-day]");
+  if(day){ openDay(day.dataset.day); return; }
+  const nav = e.target.closest("[data-cal]");
+  if(nav){
+    const step = +nav.dataset.cal;
+    if(step===0){ calMonth = new Date(); calMonth.setDate(1); selDay = ymd(new Date()); }
+    else calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth()+step, 1);
+    render();
+  }
+});
+
+document.addEventListener("click", e=>{
+  const el = e.target.closest("[data-act]"); if(!el) return;
+  const id = +el.closest(".item")?.dataset.id; if(!id) return;
+  const act = el.dataset.act;
+  if(act==="done"){ e.stopPropagation(); toggleDone(id); }
+  else if(act==="toggleOpen"){ openId = openId===id ? null : id; render(); }
+  else if(act==="delete"){ remove(id); }
+  else if(act==="copy"){
+    const it = items.find(i=>i.id===id);
+    navigator.clipboard.writeText(`Objet : ${it.subject||""}\n\n${it.body||""}`).then(()=>toast("Mail copié"));
+  }
+});
+
+document.addEventListener("change", async e=>{
+  const f = e.target.dataset?.f; const itemEl = e.target.closest(".details")?.closest(".item");
+  if(!f || !itemEl) return;
+  const id = +itemEl.dataset.id;
+  let v = e.target.value;
+  if(f==="title" && !v.trim()){ e.target.value = items.find(i=>i.id===id).title; return; }
+  if(f==="when") v = v || null;
+  if(await save(id,{[f]:v})){
+    if(f==="type" || f==="when") render();
+    else { const s=$("saved-"+id); if(s){ s.classList.add("show"); setTimeout(()=>s.classList.remove("show"),1200);} }
+  }
+});
+
+/* ---------- Voice ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const MIC_ERRORS = {
+  "not-allowed":   "Micro bloqué. Clique sur l'icône à gauche de l'adresse (🔒 ou 🎙) et autorise le micro, puis réessaie.",
+  "service-not-allowed": "Ce navigateur ne permet pas la dictée. Ouvre la page dans Google Chrome ou Microsoft Edge.",
+  "audio-capture": "Aucun micro trouvé. Branche un micro ou vérifie les réglages son de Windows.",
+  "network":       "La dictée a besoin d'Internet et de Chrome ou Edge (elle ne marche pas dans Brave, Opera ou Firefox).",
+  "no-speech":     "Je n'ai rien entendu. Clique sur Parler et parle tout de suite.",
+  "language-not-supported": "Le français n'est pas disponible pour la dictée dans ce navigateur.",
+};
+/* One dictation helper for both microphones (main box and assistant). */
+function makeMic(btn, input, {onStart, onStop, onError, continuous=true}){
+  if(!SR){ btn.onclick = () => onError(MIC_ERRORS["service-not-allowed"]); return; }
+  const rec = new SR();
+  rec.lang = "fr-FR";
+  rec.interimResults = true;
+  rec.continuous = continuous;    // main box: keep listening through pauses until Stop
+  let base = "", listening = false, failed = false;
+  const lbl = btn.querySelector(".lbl");
+  rec.onresult = e => { input.value = (base + " " + [...e.results].map(r=>r[0].transcript).join(" ")).trim(); input.dispatchEvent(new Event("input")); };
+  rec.onerror = e => {
+    if(e.error === "aborted") return;
+    failed = true;
+    onError(MIC_ERRORS[e.error] || ("Problème de micro : " + e.error));
+  };
+  rec.onend = () => {
+    // Chrome sometimes ends on its own after a silence: restart unless Stop was clicked or it failed.
+    if(continuous && listening && !failed){ try{ rec.start(); return; }catch{} }
+    listening = false;
+    btn.classList.remove("on"); if(lbl) lbl.textContent = "Parler";
+    onStop?.(failed);
+  };
+  btn.onclick = () => {
+    if(listening){ listening = false; rec.stop(); return; }
+    speechSynthesis?.cancel();     // don't listen to ourselves
+    base = input.value.trim(); failed = false;
+    try{ rec.start(); }catch{ return; }
+    listening = true;
+    btn.classList.add("on"); if(lbl) lbl.textContent = "Stop";
+    onStart?.();
+  };
+}
+const HINT = "Astuce : tu peux écrire plusieurs choses d'un coup, avec « puis ». Entrée pour ajouter.";
+function hint(text, bad){ $("hint").textContent = text; $("hint").style.color = bad ? "var(--bad)" : ""; }
+makeMic($("mic"), $("txt"), {
+  onStart: () => hint("Je t'écoute… clique sur Stop quand tu as fini"),
+  onStop: failed => { if(!failed) hint(HINT); },
+  onError: msg => hint(msg, true),
+});
+
+/* ---------- Assistant ---------- */
+let convId = null, briefed = false;
+let voiceOn = (()=>{ try{ return localStorage.getItem("voice") !== "off"; }catch{ return true; } })();
+const SUGGESTIONS = ["Qu'est-ce que j'ai aujourd'hui ?", "Est-ce que j'ai des mails ?", "Organise ma journée", "Et demain ?", "Qu'est-ce qui est en retard ?", "Que peux-tu faire ?"];
+
+function speak(text){
+  if(!voiceOn || !("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text.replace(/[«»]/g,""));
+  u.lang = "fr-FR";
+  const v = speechSynthesis.getVoices().find(v=>v.lang?.startsWith("fr"));
+  if(v) u.voice = v;
+  speechSynthesis.speak(u);
+}
+function bubble(text, who="bot", extra=""){
+  const el = document.createElement("div");
+  el.className = `msg ${who} ${extra}`;
+  el.textContent = text;
+  $("msgs").append(el);
+  $("msgs").scrollTop = $("msgs").scrollHeight;
+  return el;
+}
+function setVoice(on){
+  voiceOn = on;
+  $("voiceBtn").setAttribute("aria-pressed", on);
+  $("voiceBtn").textContent = on ? "🔊" : "🔇";
+  $("voiceBtn").title = on ? "Voix activée (cliquer pour couper)" : "Voix coupée (cliquer pour activer)";
+  try{ localStorage.setItem("voice", on ? "on" : "off"); }catch{}
+  if(!on) speechSynthesis?.cancel();
+}
+async function openAssistant(brief=true){
+  if(dlg.open) dlg.close();            // the day window would cover the assistant
+  $("asst").hidden = false; $("asstBtn").hidden = true;
+  $("asstIn").focus();
+  const first = !briefed;
+  briefed = true;
+  if(!first) return;
+  try{
+    const r = await api(`/assistant/briefing?now=${encodeURIComponent(localNowISO())}`);
+    $("asstMode").textContent = r.mode==="local" ? `IA gratuite sur ton PC (${r.model})`
+      : r.mode==="claude" ? "Claude (payant)" : "mode simple (IA locale non lancée)";
+    if(brief){ bubble(r.reply); speak(r.reply); }   // opened to answer a question: no welcome summary
+  }catch(e){ bubble("Je n'arrive pas à joindre le serveur : " + e.message); }
+}
+function closeAssistant(){ $("asst").hidden = true; $("asstBtn").hidden = false; speechSynthesis?.cancel(); }
+
+async function sendToAssistant(text, day){
+  text = text.trim(); if(!text) return;
+  bubble(text, "me");
+  const wait = bubble("Je réfléchis…", "bot", "typing");
+  try{
+    const r = await api("/assistant", {method:"POST", body: JSON.stringify({
+      message: text, now: localNowISO(), conversation_id: convId,
+      day: day || (dlg.open || view==="cal" ? selDay : null),
+    })});
+    convId = r.conversation_id;
+    wait.remove(); bubble(r.reply); speak(r.reply);
+    if(r.changed) await load();
+  }catch(e){ wait.remove(); bubble("Oups, une erreur : " + e.message); }
+}
+
+$("asstBtn").onclick = () => openAssistant();
+$("asstClose").onclick = closeAssistant;
+$("voiceBtn").onclick = () => setVoice(!voiceOn);
+setVoice(voiceOn);
+$("sugg").innerHTML = SUGGESTIONS.map(s=>`<button type="button">${esc(s)}</button>`).join("");
+$("sugg").onclick = e => { if(e.target.tagName==="BUTTON") sendToAssistant(e.target.textContent); };
+$("asstForm").onsubmit = e => { e.preventDefault(); const t=$("asstIn").value; $("asstIn").value=""; sendToAssistant(t); };
+makeMic($("asstMic"), $("asstIn"), {
+  continuous: false,               // short questions: send as soon as the person stops talking
+  onStart: () => { $("asstIn").placeholder = "Je t'écoute…"; },
+  onStop: failed => {
+    $("asstIn").placeholder = "Écris ou parle…";
+    if(!failed && $("asstIn").value.trim()){ const t=$("asstIn").value; $("asstIn").value=""; sendToAssistant(t); }
+  },
+  onError: msg => bubble(msg, "bot", "alert"),
+});
+if("speechSynthesis" in window) speechSynthesis.onvoiceschanged = () => {};   // loads the voice list
+
+/* ---------- Reminders while the page is open ---------- */
+function notified(){ try{ return new Set(JSON.parse(localStorage.getItem("notified")||"[]")); }catch{ return new Set(); } }
+function alertNow(title, body, icon="⏰"){
+  // The assistant says it out loud, writes it in its chat, and shows a notification.
+  const text = `${title}. ${body}`;
+  toast(icon + " " + text);
+  bubble(text, "bot", "alert");
+  speak(text);
+  if("Notification" in window && Notification.permission==="granted") new Notification(title,{body});
+}
+function checkReminders(){
+  const seen = notified(), now = Date.now();
+  for(const it of visible()){
+    if(it.done || !it.when) continue;
+    const t = new Date(it.when).getTime();
+    const key = `${it.id}@${it.when}`;                 // a moved item gets reminded again
+    // 10 minutes before an appointment
+    if(it.type==="event" && t > now && t - now <= 10*60000 && !seen.has(key+"-pre")){
+      seen.add(key+"-pre");
+      alertNow(`Dans ${Math.max(1, Math.round((t-now)/60000))} minutes : ${it.title}`, "Pense à te préparer.");
+    }
+    // At the time (tasks too, as long as they have an hour)
+    if(t <= now && now - t < 10*60000 && !seen.has(key)){
+      seen.add(key);
+      alertNow(`C'est l'heure : ${it.title}`, it.type==="task" ? "Coche-la quand c'est fait." : `${TYPES[it.type].label} de ${fmtTime(new Date(t))}.`);
+    }
+  }
+  try{ localStorage.setItem("notified", JSON.stringify([...seen].slice(-300))); }catch{}
+}
+if("Notification" in window && Notification.permission==="default"){
+  // Ask once, after the first item is added (not on page load).
+  $("addBtn").addEventListener("click", ()=>Notification.requestPermission(), {once:true});
+}
+setInterval(checkReminders, 20000);
+setInterval(()=>{
+  // Refresh "late" / "today" labels, but never while the user is typing in a form.
+  if(!busyTyping()) render();
+}, 60000);
+// New emails: checked every 2 minutes while the page is open.
+setInterval(()=>{ if(mailData?.configured) loadMail(true); }, 120000);
+
+load().then(checkReminders);
+loadMail();
+$("txt").focus();
+</script>
+</body>
+</html>
