@@ -1144,8 +1144,17 @@ setInterval(()=>{
 // New emails: checked every 2 minutes while the page is open.
 setInterval(()=>{ if(mailData?.configured) loadMail(true); }, 120000);
 
-load().then(checkReminders);
-loadMail();
+// Direct links: ?view=calendrier | taches | mails | aujourdhui, ?day=2026-11-20 (opens a day), ?assistant
+const params = new URLSearchParams(location.search);
+const VIEW_ALIASES = {aujourdhui:"today", today:"today", taches:"list", list:"list", calendrier:"cal", cal:"cal", mails:"mail", mail:"mail"};
+if(VIEW_ALIASES[params.get("view")]) view = VIEW_ALIASES[params.get("view")];
+
+Promise.all([load(), loadMail()]).then(()=>{
+  checkReminders();
+  const day = params.get("day");
+  if(day && /^\d{4}-\d{2}-\d{2}$/.test(day)) openDay(day);
+  else if(params.has("assistant")) openAssistant();
+});
 $("txt").focus();
 </script>
 </body>

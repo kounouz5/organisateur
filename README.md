@@ -1,110 +1,154 @@
-# Mon organisateur (FR)
+# 🗂️ Mon organisateur
 
-Organise ton travail en parlant ou en écrivant normalement. Une phrase comme
-« rappelle-moi d'appeler le fournisseur demain à 10h, puis réunion avec Sami lundi à 14h30 »
-devient des **tâches, rappels, événements et brouillons d'e-mails**, enregistrés et rangés par jour.
+**Application web d'organisation du travail, en français.**
+On écrit — ou on **dit** — ce qu'on a à faire, en langage naturel. L'application le comprend, le range
+toute seule (tâches, rappels, rendez-vous, brouillons de mails) et un **assistant vocal** aide à organiser
+la journée, annonce les rappels et lit les nouveaux mails.
 
-## 100 % gratuit
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-vanilla-F7DF1E?logo=javascript&logoColor=black)
+![Tests](https://img.shields.io/badge/tests-38%20pass%C3%A9s-16a34a)
+![Gratuit](https://img.shields.io/badge/100%25-gratuit%20%26%20hors--ligne-5046e5)
 
-Sans clé API, l'application ne coûte rien et marche hors-ligne :
-FastAPI, SQLite, la dictée et la voix du navigateur (Chrome / Edge) sont gratuits.
-La clé `ANTHROPIC_API_KEY` est **optionnelle et payante** : laisse-la vide pour rester gratuit.
-L'assistant affiche « gratuit, hors-ligne » ou « Claude (payant) » pour que tu saches toujours.
+![Page « Aujourd'hui »](docs/screenshots/aujourdhui.png)
 
-## Assistant intelligent gratuit (IA locale)
+> « Rappelle-moi d'appeler le fournisseur demain à 10h, puis réunion avec Sami lundi à 14h30 »
+> → **1 rappel** demain à 10:00 + **1 rendez-vous** lundi à 14:30, rangés et affichés dans le calendrier.
 
-L'assistant utilise une IA qui tourne **sur ton ordinateur**, gratuitement, avec [Ollama](https://ollama.com) :
+---
+
+## ✨ Fonctionnalités
+
+| | |
+|---|---|
+| 🗣️ **Saisie naturelle** | Une seule zone pour écrire ou dicter (micro). Plusieurs choses d'un coup avec « puis ». Les dates relatives (« demain », « lundi », « dans 2 heures ») sont comprises. |
+| ☀️ **Vue « Aujourd'hui »** | Ce qui est en retard, la journée heure par heure, les tâches à placer et un aperçu de demain, avec une barre de progression. |
+| 📅 **Calendrier** | Vue du mois ; un clic sur un jour l'ouvre en grand pour cocher, modifier ou ajouter directement à cette date. |
+| 🤖 **Assistant vocal** | Répond à voix haute : « qu'est-ce que j'ai demain ? », « organise ma journée » (il propose des horaires et les applique si on dit « oui »), « décale le rapport à 15h ». |
+| ⏰ **Rappels parlés** | 10 minutes avant un rendez-vous, puis à l'heure : message, notification et voix. |
+| 📬 **Mails** | Connexion à sa boîte (Gmail, Yahoo, iCloud… via IMAP) avec un guide pas à pas. Les mails non lus s'affichent, deviennent des tâches en un clic, et l'assistant annonce les nouveaux. **Lecture seule.** |
+| 🧠 **IA locale gratuite** *(expérimental)* | L'assistant peut utiliser un modèle d'IA qui tourne sur l'ordinateur (Ollama) — aucune donnée envoyée, aucun coût. Sans IA, il fonctionne avec des règles. |
+| 📱 **Partout** | Mode sombre automatique, version téléphone avec barre d'onglets, export `.ics` vers Google / Outlook / Apple Agenda. |
+
+## 📸 Captures d'écran
+
+| Un jour ouvert en grand | L'assistant vocal |
+|---|---|
+| ![Jour ouvert en grand](docs/screenshots/jour.png) | ![Assistant](docs/screenshots/assistant.png) |
+| **Mails reçus** | **Calendrier en mode sombre** |
+| ![Mails reçus](docs/screenshots/mails.png) | ![Calendrier sombre](docs/screenshots/sombre.png) |
+
+<p align="center"><img src="docs/screenshots/telephone.png" alt="Version téléphone" width="300"></p>
+
+*Captures réalisées avec des données de démonstration.*
+
+## 🛠️ Technologies
+
+| Partie | Outils |
+|---|---|
+| Serveur | **Python**, **FastAPI**, Pydantic, Uvicorn |
+| Données | **SQLite** (module standard `sqlite3`) |
+| Interface | **HTML / CSS / JavaScript** sans framework, design responsive, mode sombre |
+| Voix | **Web Speech API** du navigateur (reconnaissance + synthèse vocale en français) |
+| Compréhension du texte | Analyseur par règles et expressions régulières (dates relatives, type d'élément) |
+| IA | **Ollama** (modèle local, gratuit) avec appels d'outils ; Claude (API Anthropic) en option |
+| Mails | **IMAP** (`imaplib`, module `email`) en lecture seule |
+| Qualité | **pytest** (38 tests), faux serveur IMAP et fausse IA pour tester sans réseau |
+| Outils de dev | Git, GitHub, assistant de programmation IA (Claude Code) |
+
+## 🧠 Architecture
+
+```mermaid
+flowchart LR
+    U[Utilisateur<br/>clavier ou micro] --> P[Page web<br/>HTML / CSS / JS]
+    P -->|POST /add| A[Analyseur<br/>règles + dates]
+    P -->|POST /assistant| B{Assistant}
+    B -->|1. si clé API| C[Claude]
+    B -->|2. si lancé| O[IA locale<br/>Ollama]
+    B -->|3. toujours dispo| R[Règles<br/>hors-ligne]
+    C & O -->|outils| T[ajouter · déplacer<br/>terminer · lire les mails]
+    A --> D[(SQLite)]
+    T --> D
+    T --> M[Boîte mail<br/>IMAP lecture seule]
+    P -->|GET /mail| M
+```
+
+Points clés :
+- **Dégradation propre** : si l'IA ne répond pas, l'assistant repasse tout seul sur les règles — l'application ne casse jamais.
+- **L'IA n'invente rien** : elle agit uniquement via des outils (ajouter, modifier, lire les mails) et reçoit l'état à jour de l'application à chaque message. Les dates des jours suivants lui sont données toutes prêtes, car les petits modèles se trompent souvent dans les calculs de dates.
+- **Mails en lecture seule** : boîte ouverte en `readonly`, messages lus avec `BODY.PEEK` (ils restent « non lus »). Un test le vérifie.
+
+## 🚀 Essayer l'application
+
+**Le plus simple (Windows)** : installer [Python](https://www.python.org/downloads/) en cochant *Add Python to PATH*,
+télécharger le projet (**Code → Download ZIP**), l'extraire, puis **double-cliquer sur `Lancer-application.bat`**.
+La première fois, il installe ce qu'il faut (1 à 2 minutes), puis l'application s'ouvre dans le navigateur.
+
+**À la main** (Windows, macOS, Linux) :
 
 ```bash
-ollama pull qwen3:4b
-```
-
-Dès qu'Ollama est lancé, l'assistant comprend les phrases libres (« faut que je pense à appeler le dentiste
-vendredi genre 9h30 »). Sans Ollama, il repasse tout seul en mode simple (règles). Ordre utilisé :
-Claude (si clé API, payant) → IA locale (gratuite) → règles. `OLLAMA_MODEL=qwen3:8b` = plus intelligent, plus lent.
-
-## Fonctions
-
-- **Calendrier** : touche un jour pour l'ouvrir en grand (heures, cocher, ajouter à ce jour).
-- **📬 Mails reçus** : connecte ta boîte (Gmail, Yahoo, iCloud… via IMAP, gratuit) avec un
-  « mot de passe d'application ». L'app affiche tes mails non lus, en fait des tâches en un clic,
-  et l'assistant annonce à voix haute chaque nouveau mail (vérifié toutes les 2 minutes, page ouverte).
-  **Lecture seule** : rien n'est envoyé, supprimé ni marqué comme lu. Le compte est enregistré
-  dans `data/mail.json`, uniquement sur ton ordinateur.
-- **Assistant qui parle** (💬 en bas à droite) : « qu'est-ce que j'ai aujourd'hui ? », « organise ma journée »
-  (il propose des heures, réponds « oui »), « mets le rapport à 11h », « j'ai fini le rapport ».
-  Il lit ses réponses à voix haute et annonce les rappels (10 min avant un rendez-vous, puis à l'heure).
-
-- **Une seule zone de saisie** : écris ou clique sur 🎙, puis Entrée. Plusieurs choses d'un coup, c'est OK.
-- **Liste rangée par jour** : En retard · Aujourd'hui · Demain · Cette semaine · Plus tard · Sans date.
-- **Cocher** pour terminer (avec « Annuler »), **cliquer** sur un élément pour le modifier (enregistré automatiquement).
-- **Supprimer** avec « Annuler » pendant 5 secondes.
-- **Filtres** : Tâches, Rappels, Événements, Mails.
-- **📅 Ajouter à mon agenda** (fichier `.ics` pour Google / Outlook / Apple) et **✉️ Ouvrir dans ma messagerie** pour les mails.
-- **Notifications** quand un rappel arrive (si la page est ouverte).
-- Données sauvegardées dans `data/organizer.db` (SQLite).
-
-## Démo
-
-1. `uvicorn app.main:app --reload`
-2. Ouvre http://localhost:8000, clique sur 🎙 (Chrome/Edge) ou écris ton message.
-
-> « Rappelle-moi de commander les cartons demain à 9h, puis réunion avec le client vendredi à 15h »
-> → 1 rappel (demain 09:00) + 1 événement (vendredi 15:00)
-
-_(ajoute ici un GIF de la démo)_
-
-## Comment ça marche
-
-```
-Micro (Web Speech API, fr-FR) → texte → POST /parse → { items: [...] }
-                                           ├─ LLM (si ANTHROPIC_API_KEY) : JSON structuré
-                                           └─ Parseur par règles (hors-ligne, fallback)
-```
-
-- **Deux moteurs :** le LLM comprend les formulations libres ; le parseur par règles garantit que l'app marche sans clé ni réseau.
-- **Dégradation propre :** si l'API LLM échoue, la requête retombe sur les règles.
-- **Dates relatives** résolues côté serveur (demain, lundi, dans 2 heures, après-demain à 14h30).
-
-## Installation
-
-```bash
-python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env        # optionnel : ajoute ANTHROPIC_API_KEY
-uvicorn app.main:app --reload
+python -m uvicorn app.main:app --port 8001
+```
+
+Puis ouvrir <http://localhost:8001> dans **Chrome** ou **Edge** (nécessaires pour la dictée vocale).
+
+**Assistant plus intelligent (optionnel, gratuit, expérimental)** : installer [Ollama](https://ollama.com),
+télécharger un modèle qui gère les appels d'outils, et indiquer son nom dans la variable `OLLAMA_MODEL`
+(voir `.env.example`). L'assistant l'utilise automatiquement dès qu'Ollama est lancé ; sinon il fonctionne en mode simple.
+
+**Lancer les tests** :
+
+```bash
 pytest
 ```
 
-## API
+## 🔒 Vie privée et gratuité
 
-`POST /parse` `{ "text": "...", "now": "2026-11-14T12:00:00" }` →
+- Tout tourne **sur l'ordinateur** : les tâches sont dans `data/organizer.db`, le compte mail dans `data/mail.json`
+  (dossier exclu de Git).
+- **Aucun service payant n'est nécessaire.** La clé API Claude est optionnelle (voir `.env.example`).
+- La dictée vocale utilise le service de reconnaissance de Chrome / Edge.
 
-```json
-{ "engine": "rules",
-  "items": [{ "type": "reminder", "title": "Commander les cartons", "when": "2026-11-15T09:00" }] }
-```
+## 📚 Ce que j'ai appris
 
-Types : `task`, `reminder`, `event`, `email_draft` (avec `to`, `subject`, `body`).
+- Concevoir une **API REST** avec FastAPI et Pydantic (validation, codes d'erreur, routes CRUD).
+- Analyser du **langage naturel en français** avec des règles et des expressions régulières, et calculer des dates relatives.
+- Intégrer un **modèle d'IA avec appels d'outils** (local avec Ollama, ou Claude), et garder un mode de secours fiable.
+- Utiliser les **API du navigateur** : reconnaissance et synthèse vocale, notifications, stockage local.
+- Lire une boîte mail en **IMAP** de façon sûre (lecture seule, mot de passe d'application, gestion des erreurs).
+- Écrire des **tests automatisés** avec pytest, en simulant les services externes (faux serveur IMAP, fausse IA).
+- Soigner l'**expérience utilisateur** : interface responsive, mode sombre, annulation, messages d'erreur clairs en français.
+
+## 🗺️ Prochaines étapes
+
+- [ ] Comptes utilisateurs, pour pouvoir mettre l'application en ligne
+- [ ] Transcription vocale côté serveur (Whisper) pour tous les navigateurs
+- [ ] Dates absolues (« le 20 novembre ») et arabe tunisien / franco-arabe
+- [ ] Synchronisation avec Google Agenda
+
+<details>
+<summary><b>API (pour les développeurs)</b></summary>
 
 | Méthode | Route | Rôle |
 |---|---|---|
-| `POST` | `/add` | Analyse la phrase **et** enregistre les éléments |
-| `GET` | `/items` | Liste tous les éléments |
-| `PATCH` | `/items/{id}` | Modifie (titre, date, `done`…) |
+| `POST` | `/add` | Analyse une phrase et enregistre les éléments (`text`, `now`, `day` optionnel) |
+| `POST` | `/parse` | Analyse seulement, sans enregistrer |
+| `GET` | `/items` | Liste les éléments |
+| `PATCH` | `/items/{id}` | Modifie (titre, date, type, `done`…) |
 | `DELETE` | `/items/{id}` | Supprime |
 | `GET` | `/items/{id}/ics` | Export agenda `.ics` |
+| `POST` | `/assistant` | Discussion avec l'assistant (`message`, `conversation_id`) |
+| `GET` | `/assistant/briefing` | Résumé parlé de la journée |
+| `GET` | `/mail` | Mails non lus (lecture seule) |
+| `POST` / `DELETE` | `/mail/connect` | Connecter / déconnecter la boîte mail |
 
-## Limites connues
+Liens directs vers l'interface : `/?view=calendrier`, `/?view=mails`, `/?day=2026-11-20`, `/?assistant`.
 
-- Web Speech API : Chrome/Edge uniquement, nécessite une connexion.
-- Le parseur par règles ne gère pas les dates absolues ("le 20 novembre").
-- Les notifications de rappel ne marchent que si la page est ouverte.
-- Un seul utilisateur (pas de comptes).
+</details>
 
-## Prochaines étapes
+---
 
-- [x] Export `.ics` pour les événements et lien `mailto:` pour les brouillons
-- [x] Persistance (SQLite) et liste des éléments créés
-- [ ] Transcription serveur (Whisper) pour supporter tous les navigateurs
-- [ ] Dates absolues et arabe tunisien / franco-arabe
+Projet réalisé par **[kounouz5](https://github.com/kounouz5)**, étudiant·e en 3ᵉ année d'informatique. Licence [MIT](LICENSE).
