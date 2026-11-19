@@ -9,7 +9,7 @@ la journée, annonce les rappels et lit les nouveaux mails.
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-vanilla-F7DF1E?logo=javascript&logoColor=black)
-![Tests](https://img.shields.io/badge/tests-38%20pass%C3%A9s-16a34a)
+![Tests](https://img.shields.io/badge/tests-40%20pass%C3%A9s-16a34a)
 ![Gratuit](https://img.shields.io/badge/100%25-gratuit%20%26%20hors--ligne-5046e5)
 
 ![Page « Aujourd'hui »](docs/screenshots/aujourdhui.png)
@@ -55,7 +55,7 @@ la journée, annonce les rappels et lit les nouveaux mails.
 | Compréhension du texte | Analyseur par règles et expressions régulières (dates relatives, type d'élément) |
 | IA | **Ollama** (modèle local, gratuit) avec appels d'outils ; Claude (API Anthropic) en option |
 | Mails | **IMAP** (`imaplib`, module `email`) en lecture seule |
-| Qualité | **pytest** (38 tests), faux serveur IMAP et fausse IA pour tester sans réseau |
+| Qualité | **pytest** (40 tests), faux serveur IMAP et fausse IA pour tester sans réseau |
 | Outils de dev | Git, GitHub, assistant de programmation IA (Claude Code) |
 
 ##  Architecture
