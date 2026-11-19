@@ -1064,7 +1064,7 @@ async function openAssistant(brief=true){
   try{
     const r = await api(`/assistant/briefing?now=${encodeURIComponent(localNowISO())}`);
     $("asstMode").textContent = r.mode==="local" ? `IA gratuite sur ton PC (${r.model})`
-      : r.mode==="claude" ? "Claude (payant)" : "mode simple (IA locale non lancée)";
+      : r.mode==="claude" ? "Claude (payant)" : "mode rapide, gratuit";
     if(brief){ bubble(r.reply); speak(r.reply); }   // opened to answer a question: no welcome summary
   }catch(e){ bubble("Je n'arrive pas à joindre le serveur : " + e.message); }
 }

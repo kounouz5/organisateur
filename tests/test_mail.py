@@ -40,8 +40,11 @@ class FakeIMAP:
         FakeIMAP.calls.append(("uid", cmd, args))
         if cmd == "search":
             return "OK", [b" ".join(self.inbox)]
-        if cmd == "fetch":
-            return "OK", [(b"1 (UID " + args[0] + b" BODY[]<0> {100}", self.inbox[args[0]]), b")"]
+        if cmd == "fetch":   # like a real server: one answer containing every requested UID
+            out = []
+            for uid in args[0].split(b","):
+                out += [(b"1 (UID " + uid + b" BODY[]<0> {100}", self.inbox[uid]), b")"]
+            return "OK", out
         raise AssertionError(f"commande inattendue : {cmd}")
 
     def logout(self):
@@ -90,6 +93,7 @@ def test_mailbox_stays_read_only(client):
     assert ("select", "INBOX", True) in FakeIMAP.calls
     fetches = [c for c in FakeIMAP.calls if c[:2] == ("uid", "fetch")]
     assert fetches and all("PEEK" in c[2][1] for c in fetches)       # nothing marked as read
+    assert len(fetches) == 1                                          # all messages in one request
     assert not [c for c in FakeIMAP.calls if c[:2] == ("uid", "store")]
 
 

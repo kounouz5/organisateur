@@ -18,7 +18,7 @@ def fake_model(monkeypatch, script):
     """Replace Ollama by a list of answers played in order; records what the model was sent."""
     sent = []
 
-    def chat(messages, tools):
+    def chat(messages, tools, timeout=None):
         sent.append(messages)
         return script.pop(0)
 
@@ -88,12 +88,38 @@ def test_conversation_is_remembered(client, monkeypatch):
 def test_falls_back_to_rules_if_ollama_fails(client, monkeypatch):
     monkeypatch.setattr(assistant, "local_available", lambda: True)
 
-    def broken(messages, tools):
+    def broken(messages, tools, timeout=None):
         raise ConnectionError("Ollama arrêté")
 
     monkeypatch.setattr(assistant, "_ollama_chat", broken)
     r = ask(client, "qu'est-ce que j'ai aujourd'hui ?")
     assert r["engine"] == "rules" and "Rien de prévu" in r["reply"]
+
+
+def test_slow_local_ai_falls_back_and_is_paused(client, monkeypatch):
+    """A model that takes too long must never leave the person waiting."""
+    import time
+    calls = []
+
+    def slow(messages, tools, timeout=None):
+        calls.append(timeout)
+        raise TimeoutError("trop lent")
+
+    monkeypatch.setenv("OLLAMA_MODEL", "lent:1b")
+    monkeypatch.setattr(assistant, "_ollama_chat", slow)
+    assistant._local_state.update(t=time.time(), ok=True)          # "Ollama is there"
+    t = time.time()
+    r = ask(client, "qu'est-ce que j'ai aujourd'hui ?")
+    assert r["engine"] == "rules" and time.time() - t < 5
+    assert calls and calls[0] <= assistant.LOCAL_BUDGET_S          # the call got a time limit
+    assert assistant.mode() == "free"                              # paused: next messages are instant
+
+
+def test_local_ai_is_opt_in(client):
+    """Without OLLAMA_MODEL, the local AI is never used, even if Ollama runs."""
+    assistant._local_state.update(t=0.0, ok=True)
+    assert assistant.local_available() is False
+    assert client.get("/assistant/briefing").json()["mode"] == "free"
 
 
 def test_mode_is_free_without_ollama(client):

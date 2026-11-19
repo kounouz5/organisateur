@@ -121,7 +121,7 @@ def briefing(now: datetime, day: Optional[date] = None) -> str:
 
 
 def mail_summary() -> str:
-    box = mail.unread()
+    box = mail.unread(max_age=300)  # reuse what the page loaded in the last 5 minutes: instant answer
     if not box["configured"]:
         return ("Ta boîte mail n'est pas encore connectée. Va dans la section Mails "
                 "et clique sur « Connecter mon email ».")
@@ -404,7 +404,7 @@ def _run_tool(name: str, args: dict, now: Optional[datetime] = None, day: Option
                                                "fait": updated.done}, ensure_ascii=False)
                     if updated else f"Aucun élément avec l'id {item_id}."), bool(updated)
         if name == "list_unread_emails":
-            box = mail.unread()
+            box = mail.unread(max_age=300)
             if not box["configured"]:
                 return "Boîte mail non connectée (section Mails de l'application).", True
             if not box["ok"]:
@@ -477,14 +477,18 @@ def _ollama_url() -> str:
 
 
 def local_model() -> str:
-    return os.getenv("OLLAMA_MODEL", "qwen3:4b")
+    return os.getenv("OLLAMA_MODEL", "").strip()
 
 
+LOCAL_BUDGET_S = 20.0   # never let the person wait longer than this for the local AI
 _local_state = {"t": 0.0, "ok": False}
 
 
 def local_available() -> bool:
-    """Is Ollama running with the model downloaded? (checked at most every 20 s)"""
+    """Local AI is OPT-IN: used only when OLLAMA_MODEL is set (in .env) and Ollama has that model.
+    On a laptop CPU some models take minutes to answer, so the fast rules stay the default."""
+    if not local_model():
+        return False
     if clock.time() - _local_state["t"] < 20:
         return _local_state["ok"]
     try:
@@ -508,13 +512,13 @@ def warm_up() -> None:
     threading.Thread(target=run, daemon=True).start()
 
 
-def _ollama_chat(messages: list, tools: list) -> dict:
+def _ollama_chat(messages: list, tools: list, timeout: float = LOCAL_BUDGET_S) -> dict:
     import httpx
     payload = {"model": local_model(), "messages": messages, "tools": tools, "stream": False,
-               "keep_alive": "30m", "options": {"temperature": 0.2, "num_ctx": 8192}}
+               "keep_alive": "30m", "options": {"temperature": 0.2, "num_ctx": 8192, "num_predict": 300}}
     if "qwen3" in local_model():
         payload["think"] = False  # faster, and no reasoning text read aloud
-    r = httpx.post(_ollama_url() + "/api/chat", json=payload, timeout=180)
+    r = httpx.post(_ollama_url() + "/api/chat", json=payload, timeout=max(1.0, timeout))
     r.raise_for_status()
     return r.json()["message"]
 
@@ -531,11 +535,15 @@ def _local(message: str, now: datetime, day: Optional[date], state: dict) -> tup
     tools = [{"type": "function", "function": {"name": t["name"], "description": t["description"],
                                                "parameters": t["input_schema"]}} for t in TOOLS]
     changed = False
+    deadline = clock.time() + LOCAL_BUDGET_S
     for _ in range(6):  # tool loop, bounded
+        left = deadline - clock.time()
+        if left <= 1:
+            raise TimeoutError("IA locale trop lente")   # -> chat() answers with the fast rules
         convo = _recent(msgs)
         last_user = max(k for k, m in enumerate(convo) if m["role"] == "user")
         convo[last_user] = {"role": "user", "content": _context(now, day) + convo[last_user]["content"]}
-        out = _ollama_chat([{"role": "system", "content": SYSTEM_LOCAL}] + convo, tools)
+        out = _ollama_chat([{"role": "system", "content": SYSTEM_LOCAL}] + convo, tools, timeout=left)
         calls = out.get("tool_calls") or []
         msgs.append({"role": "assistant", "content": out.get("content") or "", **({"tool_calls": calls} if calls else {})})
         if not calls:
@@ -580,7 +588,8 @@ def chat(message: str, now: datetime, day: Optional[date], conversation_id: Opti
     except Exception:  # API down, Ollama stopped... -> the rules always answer
         state.pop("messages", None)
         state.pop("local_messages", None)
-        _local_state.update(t=0.0)
+        if m == "local":  # too slow or stopped: don't try the local AI again for 10 minutes
+            _local_state.update(t=clock.time() + 600, ok=False)
         reply, changed = _offline(message, now, day, state)
         engine = "rules"
     return {"conversation_id": cid, "reply": reply, "changed": changed, "engine": engine}

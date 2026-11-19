@@ -127,11 +127,18 @@ def fetch_unread(cfg: dict, limit: int = 15) -> tuple[int, list[dict]]:
         _, data = conn.uid("search", None, "UNSEEN")
         uids = data[0].split() if data and data[0] else []
         emails = []
-        for uid in reversed(uids[-limit:]):                    # newest first
-            _, parts = conn.uid("fetch", uid, "(BODY.PEEK[]<0.40000>)")  # PEEK: stays unread
-            raw = next((p[1] for p in parts or [] if isinstance(p, tuple)), None)
-            if raw:
-                emails.append(summarize(uid.decode(), raw))
+        wanted = uids[-limit:]
+        if wanted:
+            # ONE request for all the messages (not one per message): much faster on big inboxes.
+            # PEEK: they stay unread. Only the first 8 KB of each: enough for sender, subject and preview.
+            _, parts = conn.uid("fetch", b",".join(wanted), "(UID BODY.PEEK[]<0.8000>)")
+            for p in parts or []:
+                if not isinstance(p, tuple):
+                    continue
+                m = re.search(rb"UID (\d+)", p[0])
+                if m:
+                    emails.append(summarize(m.group(1).decode(), p[1]))
+            emails.sort(key=lambda e: int(e["uid"]), reverse=True)   # newest first
         return len(uids), emails
     finally:
         try:

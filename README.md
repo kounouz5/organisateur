@@ -97,7 +97,8 @@ Puis ouvrir <http://localhost:8001> dans **Chrome** ou **Edge** (nécessaires po
 
 **Assistant plus intelligent (optionnel, gratuit, expérimental)** : installer [Ollama](https://ollama.com),
 télécharger un modèle qui gère les appels d'outils, et indiquer son nom dans la variable `OLLAMA_MODEL`
-(voir `.env.example`). L'assistant l'utilise automatiquement dès qu'Ollama est lancé ; sinon il fonctionne en mode simple.
+(voir `.env.example`). Sans ce réglage, l'assistant reste en mode rapide (règles). Si l'IA met plus de 20 secondes,
+l'assistant répond quand même en mode rapide : il ne reste jamais bloqué.
 
 **Lancer les tests** :
 
